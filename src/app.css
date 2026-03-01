@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+	--color-primary: #f47b20;
+	--color-primary-light: #ff9f45;
+	--color-secondary: #8b4513;
+	--color-accent: #228b22;
+	--color-bg: #fff8f0;
+	--color-surface: #faebd7;
+	--color-text: #3d2314;
+	--color-text-secondary: #6b4423;
+}
+
+html,
+body {
+	min-height: 100%;
+	background: var(--color-bg);
+	color: var(--color-text);
+}
+
+body {
+	font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	font-family: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
+}
+
+.container-shell {
+	@apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+}
+
+.card-surface {
+	@apply rounded-2xl border border-orange-200 bg-orange-50/70 shadow-sm;
+}
+
+.btn-primary {
+	@apply inline-flex min-h-11 items-center justify-center rounded-xl bg-orange-500 px-4 py-2 font-semibold text-white transition hover:bg-orange-600 active:scale-[0.98];
+}
+
+.btn-secondary {
+	@apply inline-flex min-h-11 items-center justify-center rounded-xl border border-orange-300 bg-white px-4 py-2 font-medium text-orange-800 transition hover:bg-orange-50 active:scale-[0.98];
+}

@@ -1,0 +1,31 @@
+{
+	"name": "tiemlauanhhai",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"migrate:vercel": "if [ \"$VERCEL\" = \"1\" ]; then echo \"Running Supabase migrations on Vercel\" && npx supabase@latest db push --db-url \"$SUPABASE_DB_URL\"; else echo \"Skipping Supabase migration (not Vercel)\"; fi",
+		"build": "npm run migrate:vercel && vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"seed:admin": "bun seed-super-admin.mjs",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-vercel": "^6.3.3",
+		"@sveltejs/kit": "^2.50.2",
+		"@sveltejs/vite-plugin-svelte": "^6.2.4",
+		"@tailwindcss/vite": "^4.2.1",
+		"svelte": "^5.51.0",
+		"svelte-check": "^4.4.2",
+		"tailwindcss": "^4.2.1",
+		"typescript": "^5.9.3",
+		"vite": "^7.3.1"
+	},
+	"dependencies": {
+		"@supabase/supabase-js": "^2.98.0",
+		"zod": "^4.3.6"
+	}
+}

@@ -1,0 +1,233 @@
+insert into categories (id, name, slug, sort_order) values
+('00000000-0000-0000-0000-000000000001', 'Lẩu', 'lau', 1),
+('00000000-0000-0000-0000-000000000002', 'Gọi Thêm', 'topping', 2),
+('00000000-0000-0000-0000-000000000003', 'Đồ Uống', 'do-uong', 3)
+on conflict (id) do update
+set name = excluded.name, slug = excluded.slug, sort_order = excluded.sort_order;
+
+insert into menu_items (id, category_id, name, slug, description, ingredients, thumbnail_url, is_available, is_topping, sort_order)
+values
+(
+	'10000000-0000-0000-0000-000000000001',
+	'00000000-0000-0000-0000-000000000001',
+	'Lẩu Mắm',
+	'lau-mam',
+	'Thanh vị nguyên bản với nước lẩu mắm đậm đà.',
+	'Cá hú tươi, thịt ba chỉ xào sả ớt, cà tím, rau đắng, rau muống, bắp chuối bào, bông súng.',
+	'/images/menu/menu.jpeg',
+	true,
+	false,
+	1
+),
+(
+	'10000000-0000-0000-0000-000000000002',
+	'00000000-0000-0000-0000-000000000001',
+	'Lẩu Chả Cá Thác Lác Khổ Qua',
+	'lau-cha-ca-thac-lac-kho-qua',
+	'Vị ngọt thanh từ xương hầm và nấm rơm.',
+	'Chả cá thác lác, khổ qua, nấm rơm.',
+	'/images/menu/menu.jpeg',
+	true,
+	false,
+	2
+),
+(
+	'10000000-0000-0000-0000-000000000101',
+	'00000000-0000-0000-0000-000000000002',
+	'Bắp bò',
+	'bap-bo',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	true,
+	1
+),
+(
+	'10000000-0000-0000-0000-000000000102',
+	'00000000-0000-0000-0000-000000000002',
+	'Bò mềm',
+	'bo-mem',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	true,
+	2
+),
+(
+	'10000000-0000-0000-0000-000000000103',
+	'00000000-0000-0000-0000-000000000002',
+	'Cá hú',
+	'ca-hu',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	true,
+	3
+),
+(
+	'10000000-0000-0000-0000-000000000104',
+	'00000000-0000-0000-0000-000000000002',
+	'Tôm',
+	'tom',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	true,
+	4
+),
+(
+	'10000000-0000-0000-0000-000000000105',
+	'00000000-0000-0000-0000-000000000002',
+	'Mực',
+	'muc',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	true,
+	5
+),
+(
+	'10000000-0000-0000-0000-000000000106',
+	'00000000-0000-0000-0000-000000000002',
+	'Rau lẩu mắm',
+	'rau-lau-mam',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	true,
+	6
+),
+(
+	'10000000-0000-0000-0000-000000000107',
+	'00000000-0000-0000-0000-000000000002',
+	'Rau lẩu chả cá',
+	'rau-lau-cha-ca',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	true,
+	7
+),
+(
+	'10000000-0000-0000-0000-000000000108',
+	'00000000-0000-0000-0000-000000000002',
+	'Bún',
+	'bun',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	true,
+	8
+),
+(
+	'10000000-0000-0000-0000-000000000109',
+	'00000000-0000-0000-0000-000000000002',
+	'Mì gói',
+	'mi-goi',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	true,
+	9
+),
+(
+	'10000000-0000-0000-0000-000000000201',
+	'00000000-0000-0000-0000-000000000003',
+	'Nước dừa tươi',
+	'nuoc-dua-tuoi',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	false,
+	1
+),
+(
+	'10000000-0000-0000-0000-000000000202',
+	'00000000-0000-0000-0000-000000000003',
+	'Trà đá',
+	'tra-da',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	false,
+	2
+),
+(
+	'10000000-0000-0000-0000-000000000203',
+	'00000000-0000-0000-0000-000000000003',
+	'Nước suối',
+	'nuoc-suoi',
+	null,
+	null,
+	'/images/menu/menu.jpeg',
+	true,
+	false,
+	3
+)
+on conflict (id) do update
+set
+	category_id = excluded.category_id,
+	name = excluded.name,
+	slug = excluded.slug,
+	description = excluded.description,
+	ingredients = excluded.ingredients,
+	thumbnail_url = excluded.thumbnail_url,
+	is_available = excluded.is_available,
+	is_topping = excluded.is_topping,
+	sort_order = excluded.sort_order;
+
+insert into menu_variants (id, menu_item_id, name, price, serves_min, serves_max, is_default)
+values
+('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Lẩu 1-2 người ăn', 200000, 1, 2, true),
+('30000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'Lẩu 3-4 người ăn', 300000, 3, 4, false),
+('30000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000002', 'Lẩu 2-3 người ăn', 180000, 2, 3, true),
+('30000000-0000-0000-0000-000000000101', '10000000-0000-0000-0000-000000000101', 'Phần thường', 80000, null, null, true),
+('30000000-0000-0000-0000-000000000102', '10000000-0000-0000-0000-000000000102', 'Phần thường', 70000, null, null, true),
+('30000000-0000-0000-0000-000000000103', '10000000-0000-0000-0000-000000000103', 'Phần thường', 70000, null, null, true),
+('30000000-0000-0000-0000-000000000104', '10000000-0000-0000-0000-000000000104', 'Phần thường', 50000, null, null, true),
+('30000000-0000-0000-0000-000000000105', '10000000-0000-0000-0000-000000000105', 'Phần thường', 50000, null, null, true),
+('30000000-0000-0000-0000-000000000106', '10000000-0000-0000-0000-000000000106', 'Phần thường', 30000, null, null, true),
+('30000000-0000-0000-0000-000000000107', '10000000-0000-0000-0000-000000000107', 'Phần thường', 30000, null, null, true),
+('30000000-0000-0000-0000-000000000108', '10000000-0000-0000-0000-000000000108', 'Phần thường', 10000, null, null, true),
+('30000000-0000-0000-0000-000000000109', '10000000-0000-0000-0000-000000000109', 'Phần thường', 3000, null, null, true),
+('30000000-0000-0000-0000-000000000201', '10000000-0000-0000-0000-000000000201', 'Ly', 25000, null, null, true),
+('30000000-0000-0000-0000-000000000202', '10000000-0000-0000-0000-000000000202', 'Ly', 5000, null, null, true),
+('30000000-0000-0000-0000-000000000203', '10000000-0000-0000-0000-000000000203', 'Ly', 10000, null, null, true)
+on conflict (id) do update
+set
+	menu_item_id = excluded.menu_item_id,
+	name = excluded.name,
+	price = excluded.price,
+	serves_min = excluded.serves_min,
+	serves_max = excluded.serves_max,
+	is_default = excluded.is_default;
+
+insert into menu_media (id, menu_item_id, type, url, alt_text, sort_order)
+values
+('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'image', '/images/menu/menu.jpeg', 'Lẩu mắm Tiệm Lẩu Anh Hai', 1),
+('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', 'image', '/images/menu/menu.jpeg', 'Lẩu chả cá thác lác khổ qua', 1)
+on conflict (id) do update
+set
+	menu_item_id = excluded.menu_item_id,
+	type = excluded.type,
+	url = excluded.url,
+	alt_text = excluded.alt_text,
+	sort_order = excluded.sort_order;
+
+insert into admin_users (id, email, role)
+select id, email, 'super_admin'::admin_role
+from auth.users
+where email = 'thaitanloi365@gmail.com'
+on conflict (id) do update
+set email = excluded.email, role = excluded.role;

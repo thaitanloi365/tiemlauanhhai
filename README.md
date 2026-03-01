@@ -47,7 +47,7 @@ To keep deployments stable, this project does not run Supabase migrations during
 Run migrations separately when needed:
 
 ```sh
-SUPABASE_DB_URL='postgresql://...' npm run migrate:remote
+SUPABASE_DB_URL='postgresql://...' npm run migrate:safe
 ```
 
 Required Vercel environment variables for the app runtime:
@@ -56,4 +56,4 @@ Required Vercel environment variables for the app runtime:
 - `PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY`
 
-`SUPABASE_DB_URL` is only required when you run `migrate:remote`.
+`SUPABASE_DB_URL` is only required when you run `migrate:safe`.

@@ -1,19 +1,21 @@
-import { json } from '@sveltejs/kit';
+import { json, type RequestEvent } from '@sveltejs/kit';
 import { createServerSupabase, hasSupabaseConfig } from '$lib/server/supabase';
 import { mockDb } from '$lib/server/mock-db';
 import { adminOrderUpdateSchema } from '$lib/utils/validation';
 
-export async function GET({ params, locals }) {
+export async function GET({ params, locals }: RequestEvent) {
 	if (!locals.adminUser) return json({ message: 'Unauthorized' }, { status: 401 });
+	const orderId = params.id;
+	if (!orderId) return json({ message: 'Thiếu mã đơn hàng' }, { status: 400 });
 
 	if (!hasSupabaseConfig()) {
-		const detail = mockDb.getOrderDetail(params.id);
+		const detail = mockDb.getOrderDetail(orderId);
 		if (!detail) return json({ message: 'Không tìm thấy đơn hàng' }, { status: 404 });
 		return json(detail);
 	}
 
 	const supabase = createServerSupabase();
-	const { data: order, error: orderError } = await supabase.from('orders').select('*').eq('id', params.id).single();
+	const { data: order, error: orderError } = await supabase.from('orders').select('*').eq('id', orderId).single();
 	if (orderError || !order) return json({ message: 'Không tìm thấy đơn hàng' }, { status: 404 });
 
 	const [{ data: items }, { data: logs }, { data: review }] = await Promise.all([
@@ -28,14 +30,16 @@ export async function GET({ params, locals }) {
 	return json({ order, items: items ?? [], logs: logs ?? [], review: review ?? null });
 }
 
-export async function PATCH({ params, request, locals }) {
+export async function PATCH({ params, request, locals }: RequestEvent) {
 	if (!locals.adminUser) return json({ message: 'Unauthorized' }, { status: 401 });
+	const orderId = params.id;
+	if (!orderId) return json({ message: 'Thiếu mã đơn hàng' }, { status: 400 });
 
 	const parsed = adminOrderUpdateSchema.safeParse(await request.json());
 	if (!parsed.success) return json({ message: 'Payload không hợp lệ' }, { status: 400 });
 
 	if (!hasSupabaseConfig()) {
-		const updated = mockDb.updateOrder(params.id, {
+		const updated = mockDb.updateOrder(orderId, {
 			status: parsed.data.status,
 			tracking_id: parsed.data.trackingId ?? null,
 			tracking_url: parsed.data.trackingUrl ?? null
@@ -52,12 +56,12 @@ export async function PATCH({ params, request, locals }) {
 			tracking_id: parsed.data.trackingId ?? null,
 			tracking_url: parsed.data.trackingUrl ?? null
 		})
-		.eq('id', params.id);
+		.eq('id', orderId);
 
 	if (error) return json({ message: error.message }, { status: 500 });
 
 	await supabase.from('order_status_logs').insert({
-		order_id: params.id,
+		order_id: orderId,
 		status: parsed.data.status,
 		note: 'Cập nhật từ admin'
 	});

@@ -2,8 +2,9 @@ import { json } from '@sveltejs/kit';
 import { ADMIN_COOKIE_NAME, getAdminByUserId } from '$lib/server/admin-auth';
 import { createServerSupabaseAuthClient, hasSupabaseConfig } from '$lib/server/supabase';
 import { adminLoginSchema } from '$lib/utils/validation';
+import type { RequestEvent } from '@sveltejs/kit';
 
-export async function POST({ request, cookies, url }) {
+export async function POST({ request, cookies, url }: RequestEvent) {
 	if (!hasSupabaseConfig()) {
 		return json({ message: 'Thiếu cấu hình Supabase' }, { status: 400 });
 	}

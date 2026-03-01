@@ -170,7 +170,7 @@
 										<span class="min-w-9 text-center">{getAddonQuantity(addon.id)}</span>
 										<button type="button" class="px-3 py-2" onclick={() => updateAddonQuantity(addon.id, 1)}>+</button>
 									</div>
-									<button type="button" class="btn-primary" onclick={() => addAddonToCart(addon)}>Thêm vào giỏ</button>
+									<button type="button" class="btn-primary" aria-label="Thêm vào giỏ" onclick={() => addAddonToCart(addon)}>+</button>
 								</div>
 							</div>
 						{/each}
@@ -196,7 +196,7 @@
 										<span class="min-w-9 text-center">{getAddonQuantity(addon.id)}</span>
 										<button type="button" class="px-3 py-2" onclick={() => updateAddonQuantity(addon.id, 1)}>+</button>
 									</div>
-									<button type="button" class="btn-primary" onclick={() => addAddonToCart(addon)}>Thêm vào giỏ</button>
+									<button type="button" class="btn-primary" aria-label="Thêm vào giỏ" onclick={() => addAddonToCart(addon)}>+</button>
 								</div>
 							</div>
 						{/each}

@@ -1,12 +1,17 @@
-import { json } from '@sveltejs/kit';
-import { createServerSupabase, hasSupabaseConfig, MENU_MEDIA_BUCKET } from '$lib/server/supabase';
+import { json, type RequestEvent } from '@sveltejs/kit';
+import {
+	createServerSupabase,
+	deleteStorageFiles,
+	hasSupabaseConfig,
+	MENU_MEDIA_BUCKET
+} from '$lib/server/supabase';
 
 function getFileExtension(name: string) {
 	const parts = name.split('.');
 	return parts.length > 1 ? parts.pop()!.toLowerCase() : 'bin';
 }
 
-export async function POST({ request }) {
+export async function POST({ request }: RequestEvent) {
 	if (!hasSupabaseConfig()) {
 		return json({ message: 'Thiếu cấu hình Supabase' }, { status: 400 });
 	}
@@ -42,4 +47,22 @@ export async function POST({ request }) {
 	}
 
 	return json({ files: uploaded });
+}
+
+export async function DELETE({ request }: RequestEvent) {
+	if (!hasSupabaseConfig()) {
+		return json({ message: 'Thiếu cấu hình Supabase' }, { status: 400 });
+	}
+
+	const body = await request.json().catch(() => null);
+	const urls = Array.isArray(body?.urls)
+		? body.urls.filter((url: unknown): url is string => typeof url === 'string' && url.length > 0)
+		: [];
+
+	if (urls.length === 0) {
+		return json({ message: 'Không có URL để xóa' }, { status: 400 });
+	}
+
+	await deleteStorageFiles(urls);
+	return json({ ok: true });
 }

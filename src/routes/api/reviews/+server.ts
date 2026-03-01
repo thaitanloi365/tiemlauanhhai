@@ -2,8 +2,9 @@ import { json } from '@sveltejs/kit';
 import { createServerSupabase, hasSupabaseConfig } from '$lib/server/supabase';
 import { mockDb } from '$lib/server/mock-db';
 import { reviewSchema } from '$lib/utils/validation';
+import type { RequestEvent } from '@sveltejs/kit';
 
-export async function POST({ request }) {
+export async function POST({ request }: RequestEvent) {
 	const parsed = reviewSchema.safeParse(await request.json());
 	if (!parsed.success) {
 		return json({ message: parsed.error.issues[0]?.message ?? 'Payload không hợp lệ' }, { status: 400 });

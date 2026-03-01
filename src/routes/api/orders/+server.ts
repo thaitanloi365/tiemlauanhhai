@@ -4,8 +4,9 @@ import { mockDb } from '$lib/server/mock-db';
 import { sampleCategories, sampleMenuItems } from '$lib/sample-data';
 import { orderSchema } from '$lib/utils/validation';
 import type { Order, OrderItem } from '$lib/types';
+import type { RequestEvent } from '@sveltejs/kit';
 
-export async function GET({ url }) {
+export async function GET({ url }: RequestEvent) {
 	const sessionId = url.searchParams.get('sessionId');
 	if (!sessionId) return json({ message: 'Thiếu sessionId' }, { status: 400 });
 
@@ -24,7 +25,7 @@ export async function GET({ url }) {
 	return json({ orders: data });
 }
 
-export async function POST({ request }) {
+export async function POST({ request }: RequestEvent) {
 	const payload = await request.json();
 	const parsed = orderSchema.safeParse(payload);
 	if (!parsed.success) {

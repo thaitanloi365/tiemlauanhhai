@@ -57,3 +57,16 @@ Required Vercel environment variables for the app runtime:
 - `SUPABASE_SECRET_KEY`
 
 `SUPABASE_DB_URL` is only required when you run `migrate:safe`.
+
+## Makefile workflow
+
+`Makefile` automatically loads `.env` (if present) and exports variables for each command.
+
+Useful targets:
+
+- `make dev`
+- `make build`
+- `make check`
+- `make migrate-safe`
+- `make seed-admin`
+- `make run CMD='bun run check'` (run any command with exported `.env`)

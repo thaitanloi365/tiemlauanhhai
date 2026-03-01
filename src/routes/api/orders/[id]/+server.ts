@@ -3,6 +3,7 @@ import { createServerSupabase, hasSupabaseConfig } from '$lib/server/supabase';
 import { mockDb } from '$lib/server/mock-db';
 import { adminOrderUpdateSchema } from '$lib/utils/validation';
 import { ADMIN_COOKIE_NAME, getAdminByUserId, type AdminUser } from '$lib/server/admin-auth';
+import type { RequestEvent } from '@sveltejs/kit';
 
 async function resolveAdminUser(locals: App.Locals, cookies: { get: (name: string) => string | undefined }): Promise<AdminUser | null> {
 	if (locals.adminUser) return locals.adminUser;
@@ -16,7 +17,7 @@ async function resolveAdminUser(locals: App.Locals, cookies: { get: (name: strin
 	return getAdminByUserId(data.user.id);
 }
 
-export async function GET({ params, url, locals, cookies }) {
+export async function GET({ params, url, locals, cookies }: RequestEvent<{ id: string }>) {
 	const sessionId = url.searchParams.get('sessionId');
 	const isAdmin = url.searchParams.get('admin') === '1';
 	const adminUser = isAdmin ? await resolveAdminUser(locals, cookies) : null;
@@ -24,7 +25,7 @@ export async function GET({ params, url, locals, cookies }) {
 	if (!sessionId && !isAdmin) return json({ message: 'Thiếu sessionId' }, { status: 400 });
 
 	if (!hasSupabaseConfig()) {
-		const detail = mockDb.getOrderDetail(params.id, isAdmin ? undefined : sessionId!);
+		const detail = mockDb.getOrderDetail(params.id, isAdmin ? undefined : sessionId ?? '');
 		if (!detail) return json({ message: 'Không tìm thấy đơn hàng' }, { status: 404 });
 		return json(detail);
 	}
@@ -47,7 +48,7 @@ export async function GET({ params, url, locals, cookies }) {
 	return json({ order, items: items ?? [], logs: logs ?? [], review: review ?? null });
 }
 
-export async function PATCH({ params, request, locals, cookies }) {
+export async function PATCH({ params, request, locals, cookies }: RequestEvent) {
 	const adminUser = await resolveAdminUser(locals, cookies);
 	if (!adminUser) return json({ message: 'Unauthorized' }, { status: 401 });
 
@@ -55,7 +56,7 @@ export async function PATCH({ params, request, locals, cookies }) {
 	if (!parsed.success) return json({ message: 'Payload không hợp lệ' }, { status: 400 });
 
 	if (!hasSupabaseConfig()) {
-		const updated = mockDb.updateOrder(params.id, {
+		const updated = mockDb.updateOrder(params.id ?? '', {
 			status: parsed.data.status,
 			tracking_id: parsed.data.trackingId ?? null,
 			tracking_url: parsed.data.trackingUrl ?? null

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const email = 'thaitanloi365@gmail.com';
-const password = 'rosayefoLoi2236@';
+const email = process.env.SUPER_ADMIN_EMAIL;
+const password = process.env.SUPER_ADMIN_PASSWORD;
 
 const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -15,6 +15,11 @@ if (
 	console.error(
 		'Missing/invalid Supabase env vars. Set PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY).'
 	);
+	process.exit(1);
+}
+
+if (!email || !password) {
+	console.error('Missing SUPER_ADMIN_EMAIL or SUPER_ADMIN_PASSWORD in environment variables.');
 	process.exit(1);
 }
 

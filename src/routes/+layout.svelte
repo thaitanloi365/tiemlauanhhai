@@ -1,11 +1,26 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { onNavigate } from '$app/navigation';
 	import { LOGO_IMAGE } from '$lib/constants/assets';
-	import { cubicOut } from 'svelte/easing';
-	import { fly } from 'svelte/transition';
 	import '../app.css';
 
 	let { children } = $props();
+
+	const isAdminPath = (pathname?: string | null) => pathname === '/admin' || pathname?.startsWith('/admin/');
+
+	onNavigate((navigation) => {
+		const startViewTransition = document.startViewTransition?.bind(document);
+		if (!startViewTransition) return;
+		const fromPath = navigation.from?.url.pathname ?? null;
+		const toPath = navigation.to?.url.pathname ?? null;
+		if (isAdminPath(fromPath) || isAdminPath(toPath)) return;
+
+		return new Promise<void>((resolve) => {
+			startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
 </script>
 
 <svelte:head>
@@ -13,8 +28,4 @@
 	<meta name="theme-color" content="#F47B20" />
 </svelte:head>
 
-{#key page.url.pathname}
-	<div in:fly={{ y: 20, duration: 300, easing: cubicOut }} out:fly={{ y: -10, duration: 200, easing: cubicOut }}>
-		{@render children()}
-	</div>
-{/key}
+{@render children()}

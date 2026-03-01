@@ -44,3 +44,75 @@ h4 {
 .btn-secondary {
 	@apply inline-flex min-h-11 items-center justify-center rounded-xl border border-orange-300 bg-white px-4 py-2 font-medium text-orange-800 transition hover:bg-orange-50 active:scale-[0.98];
 }
+
+@keyframes reveal-fade-up {
+	from {
+		opacity: 0;
+		transform: translateY(18px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.reveal-fade-up {
+	will-change: opacity, transform;
+}
+
+.reveal-fade-up.reveal-init {
+	opacity: 0;
+	transform: translateY(18px);
+	transition:
+		opacity 560ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 560ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-fade-up.reveal-init.revealed {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+@supports (view-transition-name: root) {
+	@view-transition {
+		navigation: auto;
+	}
+
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation-duration: 240ms;
+		animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+	}
+
+	::view-transition-old(root) {
+		animation-name: fade-out;
+	}
+
+	::view-transition-new(root) {
+		animation-name: reveal-fade-up;
+	}
+}
+
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0.6;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.reveal-fade-up,
+	.reveal-fade-up.reveal-init,
+	.reveal-fade-up.reveal-init.revealed {
+		animation: none !important;
+		opacity: 1 !important;
+		transform: none !important;
+		transition: none !important;
+	}
+
+	::view-transition-group(*) {
+		animation-duration: 1ms !important;
+	}
+}

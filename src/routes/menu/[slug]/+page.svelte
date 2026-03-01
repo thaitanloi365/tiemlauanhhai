@@ -72,17 +72,17 @@
 	}
 
 	async function share() {
+		const shareUrl = `${window.location.origin}/menu/${encodeURIComponent(data.item.slug)}`;
 		const shareData = {
 			title: data.item.name,
-			text: data.item.description ?? 'Món ngon tại Tiệm Lẩu Anh Hai',
-			url: window.location.href
+			url: shareUrl
 		};
 
 		if (navigator.share) {
 			await navigator.share(shareData);
 			return;
 		}
-		await navigator.clipboard.writeText(shareData.url);
+		await navigator.clipboard.writeText(shareUrl);
 		copied = true;
 		setTimeout(() => (copied = false), 1800);
 	}
@@ -117,9 +117,16 @@
 			<div class="space-y-2">
 				<p class="font-medium">Chọn phần ăn</p>
 				{#each data.item.variants as variant}
-					<label class="flex cursor-pointer items-center justify-between rounded-xl border border-orange-200 px-3 py-2">
+					<label
+						class="flex cursor-pointer items-center justify-between rounded-xl border-[0.5px] border-orange-500/70 px-3 py-2"
+					>
 						<div class="flex items-center gap-2">
-							<input type="radio" bind:group={selectedVariantId} value={variant.id} />
+							<input type="radio" class="peer sr-only" bind:group={selectedVariantId} value={variant.id} />
+							<span
+								class="flex h-5 w-5 items-center justify-center rounded-full border-[1.5px] border-slate-300 bg-white transition peer-checked:border-orange-500 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-200"
+							>
+								<span class="h-2 w-2 rounded-full border border-orange-500 bg-transparent opacity-0 transition peer-checked:opacity-100"></span>
+							</span>
 							<span>{variant.name}</span>
 						</div>
 						<strong>{formatCurrency(variant.price)}</strong>
@@ -143,6 +150,7 @@
 	</section>
 
 	{#if data.isLauItem}
+		<hr class="border-orange-200" aria-hidden="true" />
 		<div class="grid gap-6 lg:grid-cols-2">
 			<section class="space-y-4">
 				<h2 class="text-2xl font-semibold">Gọi thêm</h2>

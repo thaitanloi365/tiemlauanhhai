@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { MENU_IMAGE } from '$lib/constants/assets';
 	import MenuItemForm from '$lib/components/admin/MenuItemForm.svelte';
+	import { onMount } from 'svelte';
 
 	let items = $state<any[]>([]);
 	let categories = $state<any[]>([]);
@@ -81,7 +82,7 @@
 		if (res.ok) loadMenu();
 	}
 
-	$effect(() => {
+	onMount(() => {
 		loadMenu();
 	});
 </script>
@@ -127,7 +128,23 @@
 		</div>
 
 		{#if loading}
-			<p class="mt-3 text-sm">Đang tải...</p>
+			<div class="mt-4 grid gap-3 lg:grid-cols-2">
+				{#each Array.from({ length: 6 }) as _, index (`menu-skeleton-${index}`)}
+					<div class="rounded-xl border border-orange-200 bg-white p-3 shadow-sm">
+						<div class="animate-pulse">
+							<div class="flex gap-3">
+								<div class="h-20 w-20 rounded-lg bg-orange-100"></div>
+								<div class="min-w-0 flex-1 space-y-2">
+									<div class="h-4 w-2/3 rounded bg-orange-200/70"></div>
+									<div class="h-3 w-1/2 rounded bg-orange-100"></div>
+									<div class="h-5 w-24 rounded-full bg-orange-100"></div>
+								</div>
+							</div>
+							<div class="mt-3 h-9 rounded-lg border border-orange-100 bg-orange-50/60"></div>
+						</div>
+					</div>
+				{/each}
+			</div>
 		{:else if filteredItems.length === 0}
 			<p class="mt-3 rounded-xl bg-white px-3 py-4 text-sm text-slate-600">Không có món nào khớp bộ lọc.</p>
 		{:else}

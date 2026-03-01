@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { LOGO_IMAGE } from '$lib/constants/assets';
+	import { reveal } from '$lib/actions/reveal';
 </script>
 
 <footer class="mt-16 border-t border-orange-200 bg-orange-50 pb-20 pt-10 md:pb-10">
 	<div class="container-shell grid gap-8 md:grid-cols-3">
-		<div class="space-y-3">
+		<div use:reveal={{ delay: 0 }} class="reveal-fade-up space-y-3">
 			<div class="flex items-center gap-3">
 				<img src={LOGO_IMAGE} alt="Logo Tiệm Lẩu Anh Hai" class="size-10 rounded-md object-contain" />
 				<div>
@@ -14,13 +15,13 @@
 			</div>
 			<p class="text-sm text-slate-700">Hương vị miền Tây, đậm đà tại nhà.</p>
 		</div>
-		<div class="space-y-2 text-sm text-slate-700">
+		<div use:reveal={{ delay: 80 }} class="reveal-fade-up space-y-2 text-sm text-slate-700">
 			<p class="font-semibold text-slate-900">Thông tin quán</p>
 			<p>Địa chỉ: Cập nhật sau</p>
 			<p>Giờ mở cửa: 10:00 - 22:00</p>
 			<p>Hotline: 0900 000 000</p>
 		</div>
-		<div class="space-y-2 text-sm text-slate-700">
+		<div use:reveal={{ delay: 140 }} class="reveal-fade-up space-y-2 text-sm text-slate-700">
 			<p class="font-semibold text-slate-900">Kết nối</p>
 			<div class="flex gap-4">
 				<a
@@ -61,5 +62,7 @@
 			</div>
 		</div>
 	</div>
-	<p class="container-shell mt-8 text-xs text-slate-500">© {new Date().getFullYear()} Tiệm Lẩu Anh Hai.</p>
+	<p use:reveal={{ delay: 180 }} class="reveal-fade-up container-shell mt-8 text-xs text-slate-500">
+		© {new Date().getFullYear()} Tiệm Lẩu Anh Hai.
+	</p>
 </footer>

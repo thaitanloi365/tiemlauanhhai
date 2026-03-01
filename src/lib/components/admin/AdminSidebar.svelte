@@ -34,7 +34,7 @@
 ></div>
 
 <aside
-	class={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-orange-200 bg-[#2f1e14] text-orange-50 transition-transform lg:translate-x-0 ${
+	class={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-orange-200 bg-[#2f1e14] text-orange-50 transition-transform lg:translate-x-0 lg:transition-none ${
 		open ? 'translate-x-0' : '-translate-x-full'
 	}`}
 >

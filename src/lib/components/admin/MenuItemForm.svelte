@@ -102,6 +102,40 @@
 		addMediaEntries(data.files ?? []);
 	}
 
+	async function uploadThumbnailFile(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+
+		uploading = true;
+		message = '';
+
+		const formData = new FormData();
+		formData.append('files', file);
+
+		const res = await fetch('/api/admin/upload', {
+			method: 'POST',
+			body: formData
+		});
+		const data = await res.json();
+		uploading = false;
+		input.value = '';
+
+		if (!res.ok) {
+			message = data.message ?? 'Upload thumbnail thất bại';
+			return;
+		}
+
+		const uploadedFiles = (data.files ?? []) as MediaEntry[];
+		const firstImage = uploadedFiles.find((entry) => entry.type === 'image');
+		if (!firstImage?.url) {
+			message = 'Không tìm thấy ảnh hợp lệ sau khi upload.';
+			return;
+		}
+
+		form.thumbnailUrl = firstImage.url;
+	}
+
 	function removeMedia(index: number) {
 		media = media.filter((_, i) => i !== index);
 	}
@@ -199,10 +233,30 @@
 					<textarea class="min-h-24 w-full rounded-xl border border-orange-200 px-3 py-2" bind:value={form.ingredients}></textarea>
 				</label>
 
-				<label class="block text-sm sm:col-span-2">
-					<span class="mb-1 block font-medium">Thumbnail URL</span>
-					<input class="w-full rounded-xl border border-orange-200 px-3 py-2" bind:value={form.thumbnailUrl} />
-				</label>
+				<div class="block text-sm sm:col-span-2">
+					<span class="mb-1 block font-medium">Thumbnail</span>
+					<div class="rounded-xl border border-orange-200 bg-orange-50/40 p-3">
+						<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+							<img
+								src={form.thumbnailUrl || MENU_IMAGE}
+								alt="Thumbnail preview"
+								class="h-24 w-24 rounded-lg border border-orange-100 bg-white object-cover"
+							/>
+							<div class="flex-1 space-y-2">
+								<div class="flex flex-wrap gap-2">
+									<label class="btn-secondary cursor-pointer px-3 py-2 text-sm">
+										<input class="hidden" type="file" accept="image/*" onchange={uploadThumbnailFile} />
+										{uploading ? 'Đang upload...' : 'Upload thumbnail'}
+									</label>
+									<button class="btn-secondary px-3 py-2 text-sm" type="button" onclick={() => (form.thumbnailUrl = MENU_IMAGE)}>
+										Dùng ảnh mặc định
+									</button>
+								</div>
+								<p class="truncate text-xs text-slate-600">{form.thumbnailUrl || MENU_IMAGE}</p>
+							</div>
+						</div>
+					</div>
+				</div>
 
 				<label class="inline-flex items-center gap-2 text-sm">
 					<input type="checkbox" bind:checked={form.isTopping} />

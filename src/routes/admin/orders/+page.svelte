@@ -1,10 +1,20 @@
 <script lang="ts">
 	import { formatCurrency, statusClass, statusLabel } from '$lib/utils/format';
+	import { onMount } from 'svelte';
 
 	let orders = $state<any[]>([]);
 	let status = $state('');
 	let q = $state('');
 	let loading = $state(true);
+	const statusFilterOptions = [
+		{ label: 'Tất cả trạng thái', value: '' },
+		{ label: 'Chờ xác nhận', value: 'pending' },
+		{ label: 'Đã xác nhận', value: 'confirmed' },
+		{ label: 'Đang chuẩn bị', value: 'preparing' },
+		{ label: 'Đang giao', value: 'shipping' },
+		{ label: 'Đã giao', value: 'delivered' },
+		{ label: 'Đã hủy', value: 'cancelled' }
+	];
 
 	async function loadOrders() {
 		loading = true;
@@ -18,7 +28,7 @@
 		loading = false;
 	}
 
-	$effect(() => {
+	onMount(() => {
 		loadOrders();
 	});
 </script>
@@ -28,13 +38,9 @@
 		<h1 class="text-3xl font-bold">Quản lý đơn hàng</h1>
 		<div class="flex gap-2">
 			<select class="rounded-xl border border-orange-200 px-3 py-2" bind:value={status} onchange={loadOrders}>
-				<option value="">Tất cả trạng thái</option>
-				<option value="pending">pending</option>
-				<option value="confirmed">confirmed</option>
-				<option value="preparing">preparing</option>
-				<option value="shipping">shipping</option>
-				<option value="delivered">delivered</option>
-				<option value="cancelled">cancelled</option>
+				{#each statusFilterOptions as option}
+					<option value={option.value}>{option.label}</option>
+				{/each}
 			</select>
 			<input
 				class="rounded-xl border border-orange-200 px-3 py-2"
@@ -47,7 +53,20 @@
 	</div>
 
 	{#if loading}
-		<p class="card-surface p-4">Đang tải...</p>
+		<div class="card-surface animate-pulse p-4">
+			<div class="mb-3 h-5 w-40 rounded bg-orange-200/70"></div>
+			<div class="space-y-2">
+				{#each Array.from({ length: 7 }) as _, index (`orders-row-skeleton-${index}`)}
+					<div class="grid grid-cols-5 gap-2 rounded-lg bg-white/80 p-3">
+						<div class="h-3 rounded bg-orange-100"></div>
+						<div class="h-3 rounded bg-orange-100"></div>
+						<div class="h-3 rounded bg-orange-100"></div>
+						<div class="h-3 rounded bg-orange-100"></div>
+						<div class="h-3 rounded bg-orange-100"></div>
+					</div>
+				{/each}
+			</div>
+		</div>
 	{:else}
 		<div class="overflow-x-auto rounded-2xl border border-orange-100 bg-white">
 			<table class="min-w-full text-left text-sm">

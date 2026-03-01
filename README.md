@@ -41,16 +41,19 @@ You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
 
-## Vercel deployment with auto migration
+## Vercel deployment
 
-This project runs Supabase migrations automatically during Vercel builds.
+To keep deployments stable, this project does not run Supabase migrations during `build`.
+Run migrations separately when needed:
 
-- On Vercel, `build` runs `migrate:vercel` before `vite build`.
-- Outside Vercel (local build), migration is skipped.
+```sh
+SUPABASE_DB_URL='postgresql://...' npm run migrate:remote
+```
 
-Required Vercel environment variables:
+Required Vercel environment variables for the app runtime:
 
 - `PUBLIC_SUPABASE_URL`
 - `PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY`
-- `SUPABASE_DB_URL` (direct Postgres connection string for `supabase db push`)
+
+`SUPABASE_DB_URL` is only required when you run `migrate:remote`.

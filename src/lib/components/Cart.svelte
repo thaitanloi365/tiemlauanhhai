@@ -34,7 +34,7 @@
 		transition:fade={{ duration: 180 }}
 	>
 		<div
-			class="absolute inset-x-0 bottom-0 flex w-full max-h-[85dvh] flex-col rounded-t-2xl bg-white p-4 shadow-2xl md:inset-x-auto md:inset-y-0 md:bottom-auto md:right-0 md:h-full md:max-h-screen md:w-[420px] md:rounded-none"
+			class="absolute inset-x-0 bottom-0 flex w-full max-h-[85dvh] flex-col rounded-t-2xl bg-card p-4 shadow-2xl md:inset-x-auto md:inset-y-0 md:bottom-auto md:right-0 md:h-full md:max-h-screen md:w-[420px] md:rounded-none"
 			role="dialog"
 			aria-modal="true"
 			tabindex="-1"
@@ -72,7 +72,7 @@
 									</button>
 									<div class="flex items-center gap-2">
 										<button
-											class="size-9 rounded-lg border border-orange-200 disabled:opacity-55"
+											class="size-9 rounded-lg border border-orange-200 disabled:cursor-not-allowed disabled:opacity-55"
 											type="button"
 											disabled={line.quantity <= 1}
 											aria-disabled={line.quantity <= 1}

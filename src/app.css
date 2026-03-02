@@ -141,11 +141,23 @@
 }
 
 .btn-primary {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-9 items-center justify-center rounded-md px-4 py-2 text-sm font-medium shadow-xs transition;
+  @apply bg-primary text-primary-foreground hover:bg-primary/90 inline-flex min-h-9 cursor-pointer items-center justify-center rounded-md px-4 py-2 text-sm font-medium shadow-xs transition disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .btn-secondary {
-  @apply bg-background hover:bg-accent hover:text-accent-foreground inline-flex min-h-9 items-center justify-center rounded-md border px-4 py-2 text-sm font-medium shadow-xs transition;
+  @apply bg-background hover:bg-accent hover:text-accent-foreground inline-flex min-h-9 cursor-pointer items-center justify-center rounded-md border px-4 py-2 text-sm font-medium shadow-xs transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    @apply cursor-pointer;
+  }
+
+  button:disabled,
+  [role='button'][aria-disabled='true'] {
+    @apply cursor-not-allowed;
+  }
 }
 
 @keyframes reveal-fade-up {

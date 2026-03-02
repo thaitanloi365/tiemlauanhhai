@@ -16,7 +16,7 @@
 		onkeydown={(event) => event.key === 'Escape' && onClose()}
 	>
 		<section
-			class="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-4"
+			class="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-card p-4"
 			role="dialog"
 			aria-modal="true"
 			tabindex="-1"

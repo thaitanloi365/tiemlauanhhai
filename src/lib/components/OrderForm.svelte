@@ -5,6 +5,7 @@
 	import { HCM_WARDS_OLD } from '$lib/data/hcm-wards-old';
 	import { PROVINCES_NEW } from '$lib/data/provinces-new';
 	import { HCMC_PROVINCE_CODE, HCMC_PROVINCE_NAME, PROVINCES_OLD } from '$lib/data/provinces-old';
+	import PhoneInput from '$lib/components/PhoneInput.svelte';
 	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
 
 	type AddressMode = 'old' | 'new';
@@ -38,6 +39,17 @@
 		return invalidFields.includes(field);
 	}
 
+	const formControlBaseClass =
+		'w-full rounded-xl border-2 bg-orange-50/70 px-3 py-2 transition focus:outline-none';
+	const formControlValidClass =
+		'border-primary/70 focus:border-primary focus:ring-2 focus:ring-primary/20';
+	const formControlInvalidClass =
+		'border-red-400 ring-2 ring-red-200 focus:border-red-500 focus:ring-red-200';
+
+	function controlClass(field: string) {
+		return `${formControlBaseClass} ${isInvalid(field) ? formControlInvalidClass : formControlValidClass}`;
+	}
+
 	const hcmProvinceName = HCMC_PROVINCE_NAME;
 	let selectedProvinceCode = $state(HCMC_PROVINCE_CODE);
 	let addressMode = $state<AddressMode>('old');
@@ -49,7 +61,6 @@
 	let subscriberSubmitting = $state(false);
 	let subscriberMessage = $state('');
 	let subscriberError = $state('');
-	let phoneDisplayValue = $state('');
 
 	const provinceOptions = $derived(addressMode === 'old' ? PROVINCES_OLD : PROVINCES_NEW);
 	const provinceByCode = $derived(new Map(provinceOptions.map((province) => [province.code, province.name])));
@@ -97,37 +108,6 @@
 		}
 	});
 
-	function normalizeVietnamPhoneInput(value: string) {
-		const digitsOnly = value.replace(/\D/g, '');
-		if (!digitsOnly) return '';
-		if (digitsOnly.startsWith('84')) return `0${digitsOnly.slice(2, 11)}`;
-		if (digitsOnly.startsWith('0')) return digitsOnly.slice(0, 10);
-		return digitsOnly.slice(0, 10);
-	}
-
-	function formatVietnamPhone(value: string) {
-		const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
-		if (digitsOnly.length <= 4) return digitsOnly;
-		if (digitsOnly.length <= 7) return `${digitsOnly.slice(0, 4)} ${digitsOnly.slice(4)}`;
-		return `${digitsOnly.slice(0, 4)} ${digitsOnly.slice(4, 7)} ${digitsOnly.slice(7)}`;
-	}
-
-	function onPhoneInput(event: Event) {
-		const target = event.currentTarget as HTMLInputElement;
-		const normalized = normalizeVietnamPhoneInput(target.value);
-		const formatted = formatVietnamPhone(normalized);
-		model.phone = normalized;
-		phoneDisplayValue = formatted;
-		target.value = formatted;
-	}
-
-	$effect(() => {
-		const formatted = formatVietnamPhone(model.phone);
-		if (phoneDisplayValue !== formatted) {
-			phoneDisplayValue = formatted;
-		}
-	});
-
 	async function subscribeUnsupportedArea() {
 		subscriberMessage = '';
 		subscriberError = '';
@@ -167,9 +147,7 @@
 		<select
 			name="scheduledDate"
 			bind:value={model.scheduledDate}
-			class={`w-full rounded-xl border px-3 py-2 ${
-				isInvalid('scheduledDate') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
-			}`}
+			class={controlClass('scheduledDate')}
 			required
 		>
 			{#each dateOptions as option}
@@ -182,9 +160,7 @@
 		<select
 			name="scheduledSlot"
 			bind:value={model.scheduledSlot}
-			class={`w-full rounded-xl border px-3 py-2 ${
-				isInvalid('scheduledSlot') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
-			}`}
+			class={controlClass('scheduledSlot')}
 			required
 		>
 			{#each slotOptions as option}
@@ -197,40 +173,20 @@
 		<input
 			name="customerName"
 			bind:value={model.customerName}
-			class={`w-full rounded-xl border px-3 py-2 ${
-				isInvalid('customerName') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
-			}`}
+			class={controlClass('customerName')}
 			required
 		/>
 	</label>
 	<label class="text-sm">
 		<span class="mb-1 block font-medium">SĐT</span>
-		<div
-			class={`flex w-full items-center rounded-xl border bg-orange-50/70 transition focus-within:ring-2 ${
-				isInvalid('phone')
-					? 'border-red-400 focus-within:border-red-500 focus-within:ring-red-200'
-					: 'border-orange-300 focus-within:border-orange-500 focus-within:ring-orange-200'
-			}`}
-		>
-			<span
-				class="inline-flex min-h-11 items-center gap-1 border-r border-orange-300 px-3 py-2 text-sm font-medium text-slate-700"
-				aria-hidden="true"
-			>
-				<span>🇻🇳</span>
-				<span>+84</span>
-			</span>
-			<input
-				name="phone"
-				value={phoneDisplayValue}
-				oninput={onPhoneInput}
-				type="tel"
-				inputmode="numeric"
-				pattern="[0-9 ]*"
-				class="input-unstyled w-full rounded-r-xl border-0 bg-transparent px-3 py-2 outline-none ring-0 focus:outline-none"
-				placeholder="0912 345 678"
-				required
-			/>
-		</div>
+		<PhoneInput
+			name="phone"
+			bind:value={model.phone}
+			invalid={isInvalid('phone')}
+			controlClass={formControlBaseClass}
+			validClass={formControlValidClass}
+			invalidClass={formControlInvalidClass}
+		/>
 	</label>
 	<fieldset class="text-sm sm:col-span-2">
 		<legend class="mb-1 block font-medium">Loại địa chỉ</legend>
@@ -250,9 +206,7 @@
 		<select
 			name="province"
 			bind:value={selectedProvinceCode}
-			class={`w-full rounded-xl border px-3 py-2 ${
-				isInvalid('province') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
-			}`}
+			class={controlClass('province')}
 			required
 		>
 			{#each provinceOptions as province}
@@ -265,9 +219,7 @@
 		<select
 			name="district"
 			bind:value={model.district}
-			class={`w-full rounded-xl border px-3 py-2 ${
-				isInvalid('district') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
-			}`}
+			class={controlClass('district')}
 			required
 			disabled={!isHcmProvince}
 		>
@@ -282,9 +234,7 @@
 		<select
 			name="ward"
 			bind:value={model.ward}
-			class={`w-full rounded-xl border px-3 py-2 ${
-				isInvalid('ward') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
-			}`}
+			class={controlClass('ward')}
 			required
 			disabled={!isHcmProvince || !model.district}
 		>
@@ -299,9 +249,7 @@
 		<input
 			name="address"
 			bind:value={model.address}
-			class={`w-full rounded-xl border px-3 py-2 ${
-				isInvalid('address') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
-			}`}
+			class={controlClass('address')}
 			required
 		/>
 	</label>

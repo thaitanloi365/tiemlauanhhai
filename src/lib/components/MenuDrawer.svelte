@@ -85,7 +85,7 @@
 		transition:fade={{ duration: 180 }}
 	>
 		<div
-			class="absolute inset-x-0 bottom-0 flex max-h-[85vh] w-full flex-col rounded-t-2xl bg-white p-4 shadow-2xl md:inset-x-auto md:inset-y-0 md:bottom-auto md:right-0 md:max-h-none md:max-w-2xl md:rounded-none"
+			class="absolute inset-x-0 bottom-0 flex max-h-[85vh] w-full flex-col rounded-t-2xl bg-card p-4 shadow-2xl md:inset-x-auto md:inset-y-0 md:bottom-auto md:right-0 md:max-h-none md:max-w-2xl md:rounded-none"
 			role="dialog"
 			aria-modal="true"
 			tabindex="-1"

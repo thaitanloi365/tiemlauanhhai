@@ -46,7 +46,7 @@
 		}
 	}}
 >
-	<div class="mx-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-5">
+	<div class="mx-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-card p-4 shadow-2xl sm:p-5">
 		<div class="flex items-center justify-between gap-3">
 			<h2 class="text-xl font-semibold">Xác nhận thông tin đơn hàng</h2>
 			<button class="btn-secondary" type="button" onclick={onCancel} disabled={submitting}>Đóng</button>

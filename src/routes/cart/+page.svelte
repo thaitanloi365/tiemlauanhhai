@@ -304,9 +304,9 @@ function parseVietnamDateString(value: string) {
 								>
 									Xóa
 								</button>
-								<div class="inline-flex items-center rounded-xl border border-orange-200">
+								<div class="flex items-center gap-2">
 									<button
-										class="px-3 py-2 disabled:opacity-55"
+										class="size-9 rounded-lg border border-orange-200 disabled:cursor-not-allowed disabled:opacity-55"
 										type="button"
 										disabled={line.quantity <= 1}
 										aria-disabled={line.quantity <= 1}
@@ -314,9 +314,9 @@ function parseVietnamDateString(value: string) {
 									>
 										-
 									</button>
-									<span class="min-w-9 text-center">{line.quantity}</span>
+									<span class="w-8 text-center font-semibold">{line.quantity}</span>
 									<button
-										class="px-3 py-2"
+										class="size-9 rounded-lg border border-orange-200"
 										type="button"
 										onclick={() => cartStore.updateQuantity(line.variantId, line.quantity + 1)}
 									>

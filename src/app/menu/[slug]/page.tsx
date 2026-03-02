@@ -13,7 +13,8 @@ type PageProps = {
 
 export default async function MenuDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const { item, relatedItems, toppings, drinks } = await getMenuItemBySlug(slug);
+  const { item, relatedItems, toppings, drinks } =
+    await getMenuItemBySlug(slug);
   if (!item) return notFound();
 
   return (

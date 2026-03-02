@@ -5,7 +5,7 @@ import { CartButton } from '@/components/CartButton';
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95">
       <div className="container-shell flex h-16 items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-3">
           <img

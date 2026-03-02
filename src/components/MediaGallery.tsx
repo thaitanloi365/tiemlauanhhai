@@ -30,6 +30,7 @@ export function MediaGallery({ media }: Props) {
           <img
             src={current.url}
             alt={current.alt_text || 'Hình ảnh món ăn'}
+            decoding="async"
             className="aspect-video w-full object-cover"
           />
         )}
@@ -40,18 +41,20 @@ export function MediaGallery({ media }: Props) {
             key={entry.id}
             type="button"
             variant="outline"
-            className={`overflow-hidden rounded-xl p-0 ${index === active ? 'border-primary' : 'border-border'}`}
+            className={`h-auto w-24 shrink-0 overflow-hidden rounded-xl p-0 ${index === active ? 'border-primary' : 'border-border'}`}
             onClick={() => setActive(index)}
           >
             {entry.type === 'video' ? (
-              <div className="flex aspect-video w-24 items-center justify-center bg-muted text-xs">
+              <div className="flex aspect-video w-full items-center justify-center bg-muted text-xs">
                 Video
               </div>
             ) : (
               <img
                 src={entry.url}
                 alt={entry.alt_text || 'thumb'}
-                className="aspect-video w-24 object-cover"
+                loading="lazy"
+                decoding="async"
+                className="aspect-video w-full object-cover"
               />
             )}
           </Button>

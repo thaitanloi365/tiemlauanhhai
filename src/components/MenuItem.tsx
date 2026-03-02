@@ -42,6 +42,8 @@ export function MenuItem({ item }: Props) {
         <img
           src={item.thumbnail_url || '/logo.png'}
           alt={item.name}
+          loading="lazy"
+          decoding="async"
           className="h-full w-full object-cover"
         />
       </div>

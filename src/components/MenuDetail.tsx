@@ -46,7 +46,7 @@ export function MenuDetail({ item }: Props) {
 
   return (
     <article className="grid gap-5 lg:grid-cols-2 lg:gap-6">
-      <div className="lg:sticky lg:top-24 lg:self-start">
+      <div>
         <MediaGallery media={item.media} />
       </div>
       <div className="space-y-4">
@@ -60,7 +60,7 @@ export function MenuDetail({ item }: Props) {
           ) : null}
           {(item.preparation_time_minutes || item.note) ? (
             <div className="mt-4 space-y-3 rounded-xl border border-border bg-muted/30 p-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <h2 className="inline-flex rounded-md bg-primary/10 px-2 py-1 text-sm font-semibold uppercase tracking-wide text-primary">
                 Thông tin quan trọng
               </h2>
               {item.preparation_time_minutes ? (

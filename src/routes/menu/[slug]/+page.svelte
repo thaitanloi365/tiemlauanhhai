@@ -36,6 +36,7 @@
 				itemName: data.item.name,
 				itemSlug: data.item.slug,
 				variantName: selectedVariant.name,
+				itemNote: data.item.note,
 				price: selectedVariant.price,
 				thumbnailUrl: data.item.thumbnail_url
 			},
@@ -63,6 +64,7 @@
 				itemName: item.name,
 				itemSlug: item.slug,
 				variantName: firstVariant.name,
+				itemNote: item.note,
 				price: firstVariant.price,
 				thumbnailUrl: item.thumbnail_url
 			},
@@ -91,11 +93,16 @@
 <svelte:head>
 	<title>{data.seo.title}</title>
 	<meta name="description" content={data.seo.description} />
+	<link rel="canonical" href={data.seo.url} />
+	<meta property="og:type" content="product" />
 	<meta property="og:title" content={data.seo.title} />
 	<meta property="og:description" content={data.seo.description} />
 	<meta property="og:image" content={data.seo.image} />
 	<meta property="og:url" content={data.seo.url} />
 	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={data.seo.title} />
+	<meta name="twitter:description" content={data.seo.description} />
+	<meta name="twitter:image" content={data.seo.image} />
 </svelte:head>
 
 <Header onOpenCart={() => (cartOpen = true)} />
@@ -107,6 +114,17 @@
 		<div class="space-y-4">
 			<h1 class="text-3xl font-bold">{data.item.name}</h1>
 			<p class="text-slate-700">{data.item.description ?? 'Món ngon chuẩn vị miền Tây.'}</p>
+			{#if data.item.note}
+				<div class="rounded-xl border border-amber-300 bg-amber-50 p-4">
+					<p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Lưu ý từ nhà hàng</p>
+					<p class="mt-1 text-sm text-amber-900">{data.item.note}</p>
+				</div>
+			{/if}
+			{#if data.item.preparation_time_minutes !== null}
+				<div class="rounded-xl border border-orange-200 bg-orange-50/70 p-3 text-sm text-orange-900">
+					Thời gian chuẩn bị dự kiến: <strong>{data.item.preparation_time_minutes} phút</strong>
+				</div>
+			{/if}
 			{#if data.item.ingredients}
 				<div class="card-surface p-4 text-sm text-slate-700">
 					<p class="mb-1 font-medium">Nguyên liệu</p>
@@ -211,7 +229,13 @@
 		<div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
 			{#each data.relatedItems as item}
 				<a href={`/menu/${item.slug}`} class="card-surface p-3">
-					<img src={item.thumbnail_url || MENU_IMAGE} alt={item.name} class="h-32 w-full rounded-xl object-cover" />
+					<img
+						src={item.thumbnail_url || MENU_IMAGE}
+						alt={item.name}
+						loading="lazy"
+						decoding="async"
+						class="h-32 w-full rounded-xl object-cover"
+					/>
 					<p class="mt-2 font-medium">{item.name}</p>
 				</a>
 			{/each}

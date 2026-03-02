@@ -2,6 +2,7 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import { createServerSupabase, hasSupabaseConfig } from '$lib/server/supabase';
 import { mockDb } from '$lib/server/mock-db';
 import { adminOrderUpdateSchema } from '$lib/utils/validation';
+import type { Order } from '$lib/types';
 
 export async function GET({ params, locals }: RequestEvent) {
 	if (!locals.adminUser) return json({ message: 'Unauthorized' }, { status: 401 });
@@ -39,23 +40,31 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
 	if (!parsed.success) return json({ message: 'Payload không hợp lệ' }, { status: 400 });
 
 	if (!hasSupabaseConfig()) {
-		const updated = mockDb.updateOrder(orderId, {
+		const updates: Partial<Order> = {
 			status: parsed.data.status,
 			tracking_id: parsed.data.trackingId ?? null,
 			tracking_url: parsed.data.trackingUrl ?? null
-		});
+		};
+		if (parsed.data.status === 'confirmed') {
+			updates.expired_at = null;
+		}
+		const updated = mockDb.updateOrder(orderId, updates);
 		if (!updated) return json({ message: 'Không tìm thấy đơn' }, { status: 404 });
 		return json({ ok: true });
 	}
 
 	const supabase = createServerSupabase();
+	const updates: Record<string, unknown> = {
+		status: parsed.data.status,
+		tracking_id: parsed.data.trackingId ?? null,
+		tracking_url: parsed.data.trackingUrl ?? null
+	};
+	if (parsed.data.status === 'confirmed') {
+		updates.expired_at = null;
+	}
 	const { error } = await supabase
 		.from('orders')
-		.update({
-			status: parsed.data.status,
-			tracking_id: parsed.data.trackingId ?? null,
-			tracking_url: parsed.data.trackingUrl ?? null
-		})
+		.update(updates)
 		.eq('id', orderId);
 
 	if (error) return json({ message: error.message }, { status: 500 });

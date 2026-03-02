@@ -11,6 +11,32 @@
 	let trackingUrl = $state('');
 	let message = $state('');
 
+function formatScheduledFor(value: string | null | undefined) {
+	if (!value) return null;
+	const start = new Date(value);
+	const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+	const dateLabel = start.toLocaleDateString('vi-VN', {
+		weekday: 'long',
+		day: '2-digit',
+		month: '2-digit',
+		year: 'numeric',
+		timeZone: 'Asia/Ho_Chi_Minh'
+	});
+	const startLabel = start.toLocaleTimeString('vi-VN', {
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false,
+		timeZone: 'Asia/Ho_Chi_Minh'
+	});
+	const endLabel = end.toLocaleTimeString('vi-VN', {
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false,
+		timeZone: 'Asia/Ho_Chi_Minh'
+	});
+	return `${dateLabel} (${startLabel} - ${endLabel})`;
+}
+
 	const statusOptions = ['pending', 'confirmed', 'preparing', 'shipping', 'delivered', 'cancelled'];
 
 	async function loadDetail() {
@@ -59,7 +85,23 @@
 			<div class="card-surface p-4">
 				<h2 class="text-xl font-semibold">Thông tin đơn</h2>
 				<p class="mt-2 text-sm">Khách: {order.customer_name}</p>
+				{#if order.scheduled_for}
+					<p class="mt-1 text-sm">
+						Lịch nhận món:
+						<strong>{formatScheduledFor(order.scheduled_for)}</strong>
+					</p>
+				{/if}
 				<div class="mt-2 space-y-2">
+					{#if order.expired_at}
+						<div class="rounded-xl border border-amber-300 bg-amber-50 p-3">
+							<p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Đơn đang quá hạn</p>
+							<p class="mt-1 text-sm text-amber-900">
+								Đơn đã quá 24 giờ nhưng bạn vẫn có thể chuyển sang
+								<strong>Đã xác nhận</strong>
+								nếu nhà hàng và khách tiếp tục xử lý đơn.
+							</p>
+						</div>
+					{/if}
 					<div class="rounded-xl border border-sky-300 bg-sky-50 p-3">
 						<p class="text-xs font-semibold uppercase tracking-wide text-sky-700">Số điện thoại</p>
 						<p class="mt-1 text-sm font-semibold text-sky-900">{order.phone}</p>

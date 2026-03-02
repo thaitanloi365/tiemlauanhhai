@@ -7,7 +7,13 @@
 	<div class="container-shell grid gap-8 md:grid-cols-3">
 		<div use:reveal={{ delay: 0 }} class="reveal-fade-up space-y-3">
 			<div class="flex items-center gap-3">
-				<img src={LOGO_IMAGE} alt="Logo Tiệm Lẩu Anh Hai" class="size-10 rounded-md object-contain" />
+				<img
+					src={LOGO_IMAGE}
+					alt="Logo Tiệm Lẩu Anh Hai"
+					loading="lazy"
+					decoding="async"
+					class="size-10 rounded-md object-contain"
+				/>
 				<div>
 					<p class="text-sm text-orange-800">Tiệm Lẩu</p>
 					<p class="font-semibold">Anh Hai</p>

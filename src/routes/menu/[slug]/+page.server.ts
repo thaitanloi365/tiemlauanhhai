@@ -3,7 +3,11 @@ import { MENU_IMAGE } from '$lib/constants/assets';
 import { getMenuItemBySlug } from '$lib/server/menu';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load: PageServerLoad = async ({ params, url, setHeaders }) => {
+	setHeaders({
+		'cache-control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=7200'
+	});
+
 	const { item, relatedItems, toppings, drinks, categories } = await getMenuItemBySlug(params.slug);
 	if (!item) {
 		throw error(404, 'Không tìm thấy món ăn');

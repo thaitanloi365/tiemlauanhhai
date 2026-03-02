@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Cart from '$lib/components/Cart.svelte';
 	import Footer from '$lib/components/Footer.svelte';
@@ -9,6 +10,7 @@
 
 	let { data } = $props();
 	let cartOpen = $state(false);
+	const canonicalUrl = $derived(`${page.url.origin}/`);
 </script>
 
 <svelte:head>
@@ -17,6 +19,22 @@
 		name="description"
 		content="Đặt lẩu online Tiệm Lẩu Anh Hai. Menu lẩu miền Tây, topping phong phú, giao hàng nhanh."
 	/>
+	<link rel="canonical" href={canonicalUrl} />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="Tiệm Lẩu Anh Hai | Hương vị miền Tây" />
+	<meta
+		property="og:description"
+		content="Đặt lẩu online Tiệm Lẩu Anh Hai. Menu lẩu miền Tây, topping phong phú, giao hàng nhanh."
+	/>
+	<meta property="og:url" content={canonicalUrl} />
+	<meta property="og:image" content={`${page.url.origin}/images/menu/menu.jpeg`} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Tiệm Lẩu Anh Hai | Hương vị miền Tây" />
+	<meta
+		name="twitter:description"
+		content="Đặt lẩu online Tiệm Lẩu Anh Hai. Menu lẩu miền Tây, topping phong phú, giao hàng nhanh."
+	/>
+	<meta name="twitter:image" content={`${page.url.origin}/images/menu/menu.jpeg`} />
 </svelte:head>
 
 <Header onOpenCart={() => (cartOpen = true)} />

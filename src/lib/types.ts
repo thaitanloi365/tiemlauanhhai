@@ -33,6 +33,8 @@ export interface MenuItem {
 	slug: string;
 	description: string | null;
 	ingredients: string | null;
+	note: string | null;
+	preparation_time_minutes: number | null;
 	thumbnail_url: string | null;
 	is_available: boolean;
 	is_topping: boolean;
@@ -59,10 +61,12 @@ export interface Order {
 	district: string;
 	ward: string;
 	note: string | null;
+	scheduled_for: string | null;
 	total_amount: number;
 	status: OrderStatus;
 	tracking_id: string | null;
 	tracking_url: string | null;
+	expired_at: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -93,6 +97,7 @@ export interface CartLine {
 	itemName: string;
 	itemSlug: string;
 	variantName: string;
+	itemNote?: string | null;
 	price: number;
 	quantity: number;
 	thumbnailUrl?: string | null;

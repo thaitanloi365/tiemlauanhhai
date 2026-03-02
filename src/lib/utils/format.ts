@@ -20,6 +20,8 @@ export function statusLabel(status: string): string {
 			return 'Đã giao';
 		case 'cancelled':
 			return 'Đã hủy';
+		case 'expired':
+			return 'Hết hạn';
 		default:
 			return status;
 	}
@@ -39,6 +41,8 @@ export function statusClass(status: string): string {
 			return 'bg-green-100 text-green-800';
 		case 'cancelled':
 			return 'bg-red-100 text-red-800';
+		case 'expired':
+			return 'bg-slate-200 text-slate-800';
 		default:
 			return 'bg-slate-100 text-slate-800';
 	}

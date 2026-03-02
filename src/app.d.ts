@@ -9,6 +9,7 @@ declare global {
 				email: string;
 				role: string;
 			};
+			clientIp?: string;
 		}
 		// interface PageData {}
 		// interface PageState {}

@@ -10,7 +10,11 @@ function inPriceRange(price: number, range: string) {
 	return true;
 }
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, setHeaders }) => {
+	setHeaders({
+		'cache-control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600'
+	});
+
 	const category = 'lau';
 	const price = url.searchParams.get('price') ?? '';
 	const sort = url.searchParams.get('sort') ?? 'popular';

@@ -13,7 +13,14 @@
 >
 	<div class="container-shell flex h-16 items-center justify-between gap-4">
 		<a href="/" class="flex items-center gap-3">
-			<img src={LOGO_IMAGE} alt="Tiệm Lẩu Anh Hai" class="size-9 rounded-md object-contain" />
+			<img
+				src={LOGO_IMAGE}
+				alt="Tiệm Lẩu Anh Hai"
+				loading="eager"
+				fetchpriority="high"
+				decoding="async"
+				class="size-9 rounded-md object-contain"
+			/>
 			<div>
 				<p class="text-sm text-orange-800">Tiệm Lẩu</p>
 				<p class="text-lg font-bold leading-none">Anh Hai</p>

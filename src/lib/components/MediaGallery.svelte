@@ -15,7 +15,14 @@
 					<source src={current.url} />
 				</video>
 			{:else}
-				<img src={current.url} alt={current.alt_text || 'Hình ảnh món ăn'} class="aspect-video w-full object-cover" />
+				<img
+					src={current.url}
+					alt={current.alt_text || 'Hình ảnh món ăn'}
+					loading="eager"
+					fetchpriority="high"
+					decoding="async"
+					class="aspect-video w-full object-cover"
+				/>
 			{/if}
 		</div>
 		<div class="flex gap-2 overflow-x-auto">
@@ -28,7 +35,13 @@
 					{#if entry.type === 'video'}
 						<div class="flex h-16 w-24 items-center justify-center bg-slate-200 text-xs font-medium">Video</div>
 					{:else}
-						<img src={entry.url} alt={entry.alt_text || 'thumb'} class="h-16 w-24 object-cover" />
+						<img
+							src={entry.url}
+							alt={entry.alt_text || 'thumb'}
+							loading="lazy"
+							decoding="async"
+							class="h-16 w-24 object-cover"
+						/>
 					{/if}
 				</button>
 			{/each}

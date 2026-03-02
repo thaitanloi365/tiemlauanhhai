@@ -18,6 +18,7 @@
 			src={item.thumbnail_url || MENU_IMAGE}
 			alt={item.name}
 			loading="lazy"
+			decoding="async"
 			class="h-44 w-full object-cover"
 		/>
 	</a>

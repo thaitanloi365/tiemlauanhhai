@@ -54,6 +54,8 @@ export async function POST({ request }) {
 			slug: toSlug(body.name),
 			description: body.description ?? null,
 			ingredients: body.ingredients ?? null,
+			note: body.note ?? null,
+			preparation_time_minutes: body.preparationTimeMinutes ?? null,
 			thumbnail_url: body.thumbnailUrl ?? null,
 			is_available: true,
 			is_topping: Boolean(body.isTopping),

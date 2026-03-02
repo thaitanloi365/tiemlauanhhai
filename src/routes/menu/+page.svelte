@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Cart from '$lib/components/Cart.svelte';
 	import Footer from '$lib/components/Footer.svelte';
@@ -11,6 +12,7 @@
 
 	let { data } = $props();
 	let cartOpen = $state(false);
+	const canonicalUrl = $derived(`${page.url.origin}/menu`);
 
 	function quickAdd(item: MenuItem) {
 		const firstVariant = item.variants[0];
@@ -22,6 +24,7 @@
 			itemName: item.name,
 			itemSlug: item.slug,
 			variantName: firstVariant.name,
+			itemNote: item.note,
 			price: firstVariant.price,
 			thumbnailUrl: item.thumbnail_url
 		});
@@ -35,6 +38,16 @@
 		name="description"
 		content="Xem thực đơn lẩu miền Tây tại Tiệm Lẩu Anh Hai."
 	/>
+	<link rel="canonical" href={canonicalUrl} />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="Thực đơn | Tiệm Lẩu Anh Hai" />
+	<meta property="og:description" content="Xem thực đơn lẩu miền Tây tại Tiệm Lẩu Anh Hai." />
+	<meta property="og:url" content={canonicalUrl} />
+	<meta property="og:image" content={`${page.url.origin}/images/menu/menu.jpeg`} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Thực đơn | Tiệm Lẩu Anh Hai" />
+	<meta name="twitter:description" content="Xem thực đơn lẩu miền Tây tại Tiệm Lẩu Anh Hai." />
+	<meta name="twitter:image" content={`${page.url.origin}/images/menu/menu.jpeg`} />
 </svelte:head>
 
 <Header onOpenCart={() => (cartOpen = true)} />

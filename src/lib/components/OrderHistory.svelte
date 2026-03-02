@@ -3,6 +3,47 @@
 	import type { Order } from '$lib/types';
 
 	let { orders } = $props<{ orders: Order[] }>();
+	let nowMs = $state(Date.now());
+
+	const ORDER_EXPIRY_MS = 24 * 60 * 60 * 1000;
+
+	function formatCountdown(ms: number) {
+		const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+		const hours = Math.floor(totalSeconds / 3600);
+		const minutes = Math.floor((totalSeconds % 3600) / 60);
+		const seconds = totalSeconds % 60;
+		return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+	}
+
+	function getPendingHighlight(order: Order) {
+		if (order.status !== 'pending') return null;
+		const remainingMs = new Date(order.created_at).getTime() + ORDER_EXPIRY_MS - nowMs;
+		const expired = remainingMs <= 0;
+		const isCritical = remainingMs > 0 && remainingMs <= 60 * 60 * 1000;
+		const isWarning = remainingMs > 60 * 60 * 1000 && remainingMs <= 3 * 60 * 60 * 1000;
+		return {
+			expired,
+			isCritical,
+			isWarning,
+			toneClass: expired
+				? 'border-red-200 bg-red-50 text-red-700'
+				: isCritical
+					? 'border-red-200 bg-red-50 text-red-700'
+					: isWarning
+						? 'border-orange-200 bg-orange-50 text-orange-700'
+						: 'border-amber-200 bg-amber-50 text-amber-700',
+			text: expired
+				? 'Đơn đã quá hạn 24 giờ, đang chờ hệ thống xử lý.'
+				: `${isCritical ? '⚠️' : '⏳'} Hết hạn sau: ${formatCountdown(remainingMs)}`
+		};
+	}
+
+	$effect(() => {
+		const interval = window.setInterval(() => {
+			nowMs = Date.now();
+		}, 1000);
+		return () => window.clearInterval(interval);
+	});
 </script>
 
 {#if orders.length === 0}
@@ -16,6 +57,11 @@
 						<p class="text-sm text-slate-500">Mã đơn: {order.id.slice(0, 8).toUpperCase()}</p>
 						<p class="mt-1 font-semibold">{formatCurrency(order.total_amount)}</p>
 						<p class="text-sm text-slate-600">{new Date(order.created_at).toLocaleString('vi-VN')}</p>
+						{#if getPendingHighlight(order)}
+							<p class={`mt-1 inline-block rounded-lg border px-2 py-1 text-xs font-semibold ${getPendingHighlight(order)?.toneClass}`}>
+								{getPendingHighlight(order)?.text}
+							</p>
+						{/if}
 					</div>
 					<span class={`rounded-full px-2 py-1 text-xs font-medium ${statusClass(order.status)}`}>
 						{statusLabel(order.status)}

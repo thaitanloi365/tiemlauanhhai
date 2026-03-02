@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import Header from '$lib/components/Header.svelte';
@@ -9,6 +10,7 @@
 	let loading = $state(true);
 	let orders = $state<Order[]>([]);
 	let errorMessage = $state('');
+	const canonicalUrl = $derived(`${page.url.origin}/orders`);
 
 	async function loadOrders() {
 		loading = true;
@@ -36,6 +38,9 @@
 
 <svelte:head>
 	<title>Lịch sử đơn hàng | Tiệm Lẩu Anh Hai</title>
+	<meta name="description" content="Theo dõi trạng thái và lịch sử đơn hàng của bạn tại Tiệm Lẩu Anh Hai." />
+	<link rel="canonical" href={canonicalUrl} />
+	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <Header />

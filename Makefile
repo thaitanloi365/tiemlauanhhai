@@ -5,7 +5,7 @@ include .env
 export
 endif
 
-.PHONY: help dev build preview check migrate-safe migrate-remote seed-admin run
+.PHONY: help dev build preview check migrate-safe migrate-remote seed-admin migration-new db-nuke db-reset run
 
 help:
 	@echo "Available targets:"
@@ -16,6 +16,9 @@ help:
 	@echo "  make migrate-safe    - Validate SUPABASE_DB_URL and push migrations"
 	@echo "  make migrate-remote  - Alias of migrate-safe"
 	@echo "  make seed-admin      - Seed super admin user"
+	@echo "  make migration-new NAME=... - Create timestamped migration file"
+	@echo "  make db-nuke         - Reset remote DB from current migrations (no seed)"
+	@echo "  make db-reset        - Nuke + migrate + seed admin"
 	@echo "  make run CMD='...'   - Run any command with .env exported"
 
 dev:
@@ -37,6 +40,16 @@ migrate-remote: migrate-safe
 
 seed-admin:
 	bun run seed:admin
+
+migration-new:
+	@if [ -z "$(NAME)" ]; then echo "Usage: make migration-new NAME=create_orders_table"; exit 1; fi
+	npx supabase@latest migration new "$(NAME)"
+
+db-nuke:
+	@if [ -z "$$SUPABASE_DB_URL" ]; then echo "SUPABASE_DB_URL is missing"; exit 1; fi
+	npx supabase@latest db reset --db-url "$$SUPABASE_DB_URL" --no-seed
+
+db-reset: db-nuke migrate-safe seed-admin
 
 run:
 	@if [ -z "$(CMD)" ]; then echo "Usage: make run CMD='bun run check'"; exit 1; fi

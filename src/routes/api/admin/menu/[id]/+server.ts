@@ -30,6 +30,8 @@ export async function PATCH({ params, request }: RequestEvent) {
 			slug: body.name ? toSlug(body.name) : undefined,
 			description: body.description,
 			ingredients: body.ingredients,
+			note: body.note,
+			preparation_time_minutes: body.preparationTimeMinutes,
 			thumbnail_url: body.thumbnailUrl,
 			is_available: body.isAvailable,
 			is_topping: body.isTopping,

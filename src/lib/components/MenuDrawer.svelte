@@ -53,6 +53,7 @@
 			itemName: item.name,
 			itemSlug: item.slug,
 			variantName: firstVariant.name,
+			itemNote: item.note,
 			price: firstVariant.price,
 			thumbnailUrl: item.thumbnail_url
 		});

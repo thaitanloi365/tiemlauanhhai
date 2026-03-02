@@ -6,6 +6,122 @@ import { orderSchema } from '$lib/utils/validation';
 import type { Order, OrderItem } from '$lib/types';
 import type { RequestEvent } from '@sveltejs/kit';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const PHONE_WINDOW_MS = 60 * 60 * 1000;
+const PHONE_ACTIVE_ORDER_LIMIT = 3;
+const ACTIVE_ORDER_STATUSES: Order['status'][] = ['pending', 'confirmed', 'preparing', 'shipping'];
+const ACTIVE_ORDER_STATUS_SET = new Set<Order['status']>(ACTIVE_ORDER_STATUSES);
+const SCHEDULED_SLOTS = {
+	'10:00-12:00': { startHour: 10, endHour: 12 },
+	'12:00-14:00': { startHour: 12, endHour: 14 },
+	'14:00-16:00': { startHour: 14, endHour: 16 },
+	'16:00-18:00': { startHour: 16, endHour: 18 },
+	'18:00-20:00': { startHour: 18, endHour: 20 }
+} as const;
+
+function toVietnamClock(now: Date) {
+	return new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60 * 1000);
+}
+
+function getCutoffHour(vnDate: Date) {
+	const dayOfWeek = vnDate.getUTCDay();
+	return dayOfWeek === 0 || dayOfWeek === 6 ? 16 : 14;
+}
+
+function validateScheduledDateSlot(
+	scheduledDate: string,
+	scheduledSlot: keyof typeof SCHEDULED_SLOTS,
+	now: Date = new Date()
+): { ok: true; scheduledFor: string } | { ok: false; message: string } {
+	const [yearText, monthText, dayText] = scheduledDate.split('-');
+	const year = Number(yearText);
+	const month = Number(monthText);
+	const day = Number(dayText);
+	if (!year || !month || !day) {
+		return { ok: false, message: 'Ngày nhận món không hợp lệ.' };
+	}
+
+	const targetDate = new Date(Date.UTC(year, month - 1, day));
+	if (
+		targetDate.getUTCFullYear() !== year ||
+		targetDate.getUTCMonth() !== month - 1 ||
+		targetDate.getUTCDate() !== day
+	) {
+		return { ok: false, message: 'Ngày nhận món không hợp lệ.' };
+	}
+
+	const vnNow = toVietnamClock(now);
+	const todayInVietnam = Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate());
+	const targetInVietnam = Date.UTC(year, month - 1, day);
+	const diffDays = Math.round((targetInVietnam - todayInVietnam) / DAY_MS);
+	const targetInVnClock = new Date(`${scheduledDate}T00:00:00+07:00`);
+	const cutoffHour = getCutoffHour(targetInVnClock);
+	const slot = SCHEDULED_SLOTS[scheduledSlot];
+
+	if (!slot) {
+		return { ok: false, message: 'Khung giờ nhận món không hợp lệ.' };
+	}
+
+	if (diffDays < 0) {
+		return { ok: false, message: 'Không thể chọn ngày trong quá khứ.' };
+	}
+	if (diffDays > 7) {
+		return { ok: false, message: 'Chỉ cho phép đặt trước tối đa 7 ngày.' };
+	}
+	if (diffDays === 0) {
+		const currentHour = vnNow.getUTCHours();
+		if (currentHour >= cutoffHour) {
+			const cutoffLabel = cutoffHour === 16 ? '16:00' : '14:00';
+			return { ok: false, message: `Sau ${cutoffLabel}, nhà hàng không nhận đơn cho hôm nay.` };
+		}
+		if (slot.endHour > cutoffHour) {
+			const cutoffLabel = cutoffHour === 16 ? '16:00' : '14:00';
+			return { ok: false, message: `Khung giờ đã vượt giới hạn nhận đơn hôm nay (${cutoffLabel}).` };
+		}
+		if (slot.endHour <= currentHour) {
+			return { ok: false, message: 'Khung giờ nhận món đã qua. Vui lòng chọn khung giờ khác.' };
+		}
+	}
+
+	const startHourText = String(slot.startHour).padStart(2, '0');
+	return { ok: true, scheduledFor: `${scheduledDate}T${startHourText}:00:00+07:00` };
+}
+
+function normalizeVietnamPhone(value: string) {
+	const digits = value.replace(/[^\d+]/g, '');
+	if (digits.startsWith('+84')) return `0${digits.slice(3)}`;
+	if (digits.startsWith('84')) return `0${digits.slice(2)}`;
+	return digits;
+}
+
+function phoneRateLimitMessage() {
+	return 'Số điện thoại này có quá nhiều đơn đang xử lý. Vui lòng thử lại sau.';
+}
+
+function countRecentActiveOrdersByPhoneMock(phone: string) {
+	const now = Date.now();
+	return mockDb
+		.getAllOrders()
+		.filter((order) => {
+			if (normalizeVietnamPhone(order.phone) !== phone) return false;
+			if (!ACTIVE_ORDER_STATUS_SET.has(order.status)) return false;
+			return new Date(order.created_at).getTime() > now - PHONE_WINDOW_MS;
+		}).length;
+}
+
+async function countRecentActiveOrdersByPhoneSupabase(phone: string) {
+	const supabase = createServerSupabase();
+	const sinceIso = new Date(Date.now() - PHONE_WINDOW_MS).toISOString();
+	const { count, error } = await supabase
+		.from('orders')
+		.select('*', { count: 'exact', head: true })
+		.eq('phone', phone)
+		.gte('created_at', sinceIso)
+		.in('status', [...ACTIVE_ORDER_STATUSES]);
+	if (error) return null;
+	return count ?? 0;
+}
+
 export async function GET({ url }: RequestEvent) {
 	const sessionId = url.searchParams.get('sessionId');
 	if (!sessionId) return json({ message: 'Thiếu sessionId' }, { status: 400 });
@@ -26,15 +142,39 @@ export async function GET({ url }: RequestEvent) {
 }
 
 export async function POST({ request }: RequestEvent) {
-	const payload = await request.json();
+	let payload: unknown;
+	try {
+		payload = await request.json();
+	} catch {
+		return json({ message: 'Payload không hợp lệ' }, { status: 400 });
+	}
+
 	const parsed = orderSchema.safeParse(payload);
 	if (!parsed.success) {
 		return json({ message: parsed.error.issues[0]?.message ?? 'Dữ liệu không hợp lệ' }, { status: 400 });
 	}
 
 	const body = parsed.data;
+	if (body.website && body.website.trim().length > 0) {
+		return json({ orderId: crypto.randomUUID() });
+	}
+
+	const normalizedPhone = normalizeVietnamPhone(body.phone);
+	const scheduledValidation = validateScheduledDateSlot(
+		body.scheduledDate,
+		body.scheduledSlot as keyof typeof SCHEDULED_SLOTS
+	);
+	if (!scheduledValidation.ok) {
+		return json({ message: scheduledValidation.message }, { status: 400 });
+	}
+	const scheduledFor = scheduledValidation.scheduledFor;
 
 	if (!hasSupabaseConfig()) {
+		const mockRecentOrderCount = countRecentActiveOrdersByPhoneMock(normalizedPhone);
+		if (mockRecentOrderCount >= PHONE_ACTIVE_ORDER_LIMIT) {
+			return json({ message: phoneRateLimitMessage() }, { status: 429 });
+		}
+
 		const categoryById = new Map(sampleCategories.map((category) => [category.id, category.slug]));
 		const itemByVariantId = new Map(
 			sampleMenuItems.flatMap((item) => item.variants.map((variant) => [variant.id, item]))
@@ -55,12 +195,13 @@ export async function POST({ request }: RequestEvent) {
 			id: crypto.randomUUID(),
 			session_id: body.sessionId,
 			customer_name: body.customerName,
-			phone: body.phone,
+			phone: normalizedPhone,
 			address: body.address,
 			province: body.province,
 			district: body.district,
 			ward: body.ward,
 			note: body.note ?? null,
+			scheduled_for: scheduledFor,
 			total_amount: body.items.reduce(
 				(sum, item) => sum + item.quantity * (variantPriceMap.get(item.variantId) ?? 10000),
 				0
@@ -68,6 +209,7 @@ export async function POST({ request }: RequestEvent) {
 			status: 'pending',
 			tracking_id: null,
 			tracking_url: null,
+			expired_at: null,
 			created_at: now,
 			updated_at: now
 		};
@@ -80,6 +222,11 @@ export async function POST({ request }: RequestEvent) {
 		}));
 		mockDb.createOrder(order, orderItems);
 		return json({ orderId: order.id });
+	}
+
+	const recentOrderCount = await countRecentActiveOrdersByPhoneSupabase(normalizedPhone);
+	if (recentOrderCount !== null && recentOrderCount >= PHONE_ACTIVE_ORDER_LIMIT) {
+		return json({ message: phoneRateLimitMessage() }, { status: 429 });
 	}
 
 	const supabase = createServerSupabase();
@@ -125,12 +272,13 @@ export async function POST({ request }: RequestEvent) {
 		.insert({
 			session_id: body.sessionId,
 			customer_name: body.customerName,
-			phone: body.phone,
+			phone: normalizedPhone,
 			address: body.address,
 			province: body.province,
 			district: body.district,
 			ward: body.ward,
 			note: body.note,
+			scheduled_for: scheduledFor,
 			total_amount: totalAmount,
 			status: 'pending'
 		})

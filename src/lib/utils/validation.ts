@@ -16,6 +16,12 @@ export const orderSchema = z.object({
 	ward: z.string().min(1, 'Vui lòng chọn Phường/Xã'),
 	address: z.string().min(5, 'Vui lòng nhập địa chỉ chi tiết'),
 	note: z.string().optional().nullable(),
+	website: z.string().trim().max(200).optional().nullable(),
+	scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày nhận món không hợp lệ'),
+	scheduledSlot: z.enum(
+		['10:00-12:00', '12:00-14:00', '14:00-16:00', '16:00-18:00', '18:00-20:00'],
+		'Khung giờ nhận món không hợp lệ'
+	),
 	items: z
 		.array(
 			z.object({
@@ -42,4 +48,10 @@ export const adminOrderUpdateSchema = z.object({
 export const adminLoginSchema = z.object({
 	email: z.string().email(),
 	password: z.string().min(8).max(200)
+});
+
+export const subscriberSchema = z.object({
+	email: z.string().trim().email('Email không hợp lệ'),
+	province: z.string().trim().min(1, 'Vui lòng chọn Tỉnh/Thành'),
+	district: z.string().trim().optional().nullable()
 });

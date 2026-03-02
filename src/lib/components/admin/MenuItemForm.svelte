@@ -9,6 +9,8 @@
 		category_id: string;
 		description?: string | null;
 		ingredients?: string | null;
+		note?: string | null;
+		preparation_time_minutes?: number | null;
 		thumbnail_url?: string | null;
 		is_topping?: boolean;
 		sort_order?: number;
@@ -35,6 +37,8 @@
 		categoryId: '',
 		description: '',
 		ingredients: '',
+		note: '',
+		preparationTimeMinutes: '',
 		thumbnailUrl: MENU_IMAGE,
 		isTopping: false,
 		sortOrder: 99
@@ -46,6 +50,9 @@
 		form.categoryId = item?.category_id ?? categories[0]?.id ?? '';
 		form.description = item?.description ?? '';
 		form.ingredients = item?.ingredients ?? '';
+		form.note = item?.note ?? '';
+		form.preparationTimeMinutes =
+			typeof item?.preparation_time_minutes === 'number' ? String(item.preparation_time_minutes) : '';
 		form.thumbnailUrl = item?.thumbnail_url ?? MENU_IMAGE;
 		form.isTopping = Boolean(item?.is_topping);
 		form.sortOrder = item?.sort_order ?? 99;
@@ -158,6 +165,9 @@
 			categoryId: form.categoryId,
 			description: form.description.trim() || null,
 			ingredients: form.ingredients.trim() || null,
+			note: form.note.trim() || null,
+			preparationTimeMinutes:
+				form.preparationTimeMinutes === '' ? null : Math.max(0, Number(form.preparationTimeMinutes || 0)),
 			thumbnailUrl: form.thumbnailUrl.trim() || null,
 			isTopping: form.isTopping,
 			sortOrder: Number(form.sortOrder || 0),
@@ -231,6 +241,27 @@
 				<label class="block text-sm sm:col-span-2">
 					<span class="mb-1 block font-medium">Nguyên liệu</span>
 					<textarea class="min-h-24 w-full rounded-xl border border-orange-200 px-3 py-2" bind:value={form.ingredients}></textarea>
+				</label>
+
+				<label class="block text-sm sm:col-span-2">
+					<span class="mb-1 block font-medium">Note nhà hàng</span>
+					<textarea
+						class="min-h-20 w-full rounded-xl border border-orange-200 px-3 py-2"
+						bind:value={form.note}
+						placeholder="Ví dụ: Món cần 30-35 phút chuẩn bị khi quán đông."
+					></textarea>
+				</label>
+
+				<label class="block text-sm">
+					<span class="mb-1 block font-medium">Thời gian chuẩn bị (phút)</span>
+					<input
+						class="w-full rounded-xl border border-orange-200 px-3 py-2"
+						type="number"
+						min="0"
+						step="1"
+						bind:value={form.preparationTimeMinutes}
+						placeholder="Ví dụ: 30"
+					/>
 				</label>
 
 				<div class="block text-sm sm:col-span-2">

@@ -1,9 +1,17 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
 	import { onNavigate } from '$app/navigation';
+	import { inject } from '@vercel/analytics';
+	import { injectSpeedInsights } from '@vercel/speed-insights';
 	import { LOGO_IMAGE } from '$lib/constants/assets';
 	import '../app.css';
 
 	let { children } = $props();
+
+	if (!dev) {
+		inject();
+		injectSpeedInsights();
+	}
 
 	const isAdminPath = (pathname?: string | null) => pathname === '/admin' || pathname?.startsWith('/admin/');
 

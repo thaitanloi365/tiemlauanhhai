@@ -65,6 +65,8 @@
 				name: item.name,
 				description: item.description,
 				ingredients: item.ingredients,
+				note: item.note,
+				preparationTimeMinutes: item.preparation_time_minutes,
 				thumbnailUrl: item.thumbnail_url ?? MENU_IMAGE,
 				isAvailable: !item.is_available,
 				isTopping: item.is_topping,

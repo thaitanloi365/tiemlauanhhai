@@ -1,9 +1,29 @@
+import currency from 'currency.js';
+
+const vndCurrencyOptions = {
+	symbol: 'đ',
+	separator: ',',
+	decimal: '.',
+	precision: 0,
+	pattern: '!#'
+} as const;
+
 export function formatCurrency(value: number): string {
-	return new Intl.NumberFormat('vi-VN', {
-		style: 'currency',
-		currency: 'VND',
-		maximumFractionDigits: 0
-	}).format(value);
+	const amount = Number.isFinite(value) ? value : 0;
+	return currency(amount, vndCurrencyOptions).format();
+}
+
+export function parseCurrencyInput(value: string): number | null {
+	const digits = value.replace(/\D/g, '');
+	if (!digits) return null;
+	const parsed = currency(digits, vndCurrencyOptions).value;
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function formatCurrencyInput(value: string): string {
+	const parsed = parseCurrencyInput(value);
+	if (parsed === null) return '';
+	return currency(parsed, vndCurrencyOptions).format();
 }
 
 export function statusLabel(status: string): string {

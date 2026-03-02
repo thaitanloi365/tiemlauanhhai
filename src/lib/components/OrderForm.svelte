@@ -12,7 +12,8 @@
 		model,
 		dateOptions = [],
 		slotOptions = [],
-		submitting = false
+		submitting = false,
+		invalidFields = []
 	} = $props<{
 		model: {
 			customerName: string;
@@ -29,7 +30,12 @@
 		dateOptions?: { value: string; label: string }[];
 		slotOptions?: { value: string; label: string }[];
 		submitting?: boolean;
+		invalidFields?: string[];
 	}>();
+
+	function isInvalid(field: string) {
+		return invalidFields.includes(field);
+	}
 
 	const hcmProvinceName = HCMC_PROVINCE_NAME;
 	let selectedProvinceCode = $state(HCMC_PROVINCE_CODE);
@@ -157,7 +163,14 @@
 <div class="relative grid gap-3 sm:grid-cols-2">
 	<label class="text-sm sm:col-span-2">
 		<span class="mb-1 block font-medium">Ngày nhận món</span>
-		<select bind:value={model.scheduledDate} class="w-full rounded-xl border border-orange-200 px-3 py-2" required>
+		<select
+			name="scheduledDate"
+			bind:value={model.scheduledDate}
+			class={`w-full rounded-xl border px-3 py-2 ${
+				isInvalid('scheduledDate') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
+			}`}
+			required
+		>
 			{#each dateOptions as option}
 				<option value={option.value}>{option.label}</option>
 			{/each}
@@ -165,7 +178,14 @@
 	</label>
 	<label class="text-sm sm:col-span-2">
 		<span class="mb-1 block font-medium">Khung giờ nhận món (2 giờ)</span>
-		<select bind:value={model.scheduledSlot} class="w-full rounded-xl border border-orange-200 px-3 py-2" required>
+		<select
+			name="scheduledSlot"
+			bind:value={model.scheduledSlot}
+			class={`w-full rounded-xl border px-3 py-2 ${
+				isInvalid('scheduledSlot') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
+			}`}
+			required
+		>
 			{#each slotOptions as option}
 				<option value={option.value}>{option.label}</option>
 			{/each}
@@ -173,25 +193,39 @@
 	</label>
 	<label class="text-sm sm:col-span-2">
 		<span class="mb-1 block font-medium">Họ tên</span>
-		<input bind:value={model.customerName} class="w-full rounded-xl border border-orange-200 px-3 py-2" required />
+		<input
+			name="customerName"
+			bind:value={model.customerName}
+			class={`w-full rounded-xl border px-3 py-2 ${
+				isInvalid('customerName') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
+			}`}
+			required
+		/>
 	</label>
 	<label class="text-sm">
 		<span class="mb-1 block font-medium">SĐT</span>
-		<div class="flex w-full items-center rounded-xl border border-orange-200 bg-transparent">
+		<div
+			class={`flex w-full items-center rounded-xl border bg-orange-50/70 transition focus-within:ring-2 ${
+				isInvalid('phone')
+					? 'border-red-400 focus-within:border-red-500 focus-within:ring-red-200'
+					: 'border-orange-300 focus-within:border-orange-500 focus-within:ring-orange-200'
+			}`}
+		>
 			<span
-				class="inline-flex items-center gap-1 border-r border-orange-200 px-3 py-2 text-sm font-medium text-slate-700"
+				class="inline-flex min-h-11 items-center gap-1 border-r border-orange-300 px-3 py-2 text-sm font-medium text-slate-700"
 				aria-hidden="true"
 			>
 				<span>🇻🇳</span>
 				<span>+84</span>
 			</span>
 			<input
+				name="phone"
 				value={phoneDisplayValue}
 				oninput={onPhoneInput}
 				type="tel"
 				inputmode="numeric"
 				pattern="[0-9 ]*"
-				class="w-full rounded-r-xl px-3 py-2 outline-none"
+				class="input-unstyled w-full rounded-r-xl border-0 bg-transparent px-3 py-2 outline-none ring-0 focus:outline-none"
 				placeholder="0912 345 678"
 				required
 			/>
@@ -212,7 +246,14 @@
 	</fieldset>
 	<label class="text-sm">
 		<span class="mb-1 block font-medium">Thành phố/Tỉnh</span>
-		<select bind:value={selectedProvinceCode} class="w-full rounded-xl border border-orange-200 px-3 py-2" required>
+		<select
+			name="province"
+			bind:value={selectedProvinceCode}
+			class={`w-full rounded-xl border px-3 py-2 ${
+				isInvalid('province') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
+			}`}
+			required
+		>
 			{#each provinceOptions as province}
 				<option value={province.code}>{province.name}</option>
 			{/each}
@@ -221,8 +262,11 @@
 	<label class="text-sm">
 		<span class="mb-1 block font-medium">Quận/Huyện</span>
 		<select
+			name="district"
 			bind:value={model.district}
-			class="w-full rounded-xl border border-orange-200 px-3 py-2"
+			class={`w-full rounded-xl border px-3 py-2 ${
+				isInvalid('district') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
+			}`}
 			required
 			disabled={!isHcmProvince}
 		>
@@ -235,8 +279,11 @@
 	<label class="text-sm">
 		<span class="mb-1 block font-medium">Phường</span>
 		<select
+			name="ward"
 			bind:value={model.ward}
-			class="w-full rounded-xl border border-orange-200 px-3 py-2"
+			class={`w-full rounded-xl border px-3 py-2 ${
+				isInvalid('ward') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
+			}`}
 			required
 			disabled={!isHcmProvince || !model.district}
 		>
@@ -248,7 +295,14 @@
 	</label>
 	<label class="text-sm sm:col-span-2">
 		<span class="mb-1 block font-medium">Số nhà, tên đường</span>
-		<input bind:value={model.address} class="w-full rounded-xl border border-orange-200 px-3 py-2" required />
+		<input
+			name="address"
+			bind:value={model.address}
+			class={`w-full rounded-xl border px-3 py-2 ${
+				isInvalid('address') ? 'border-red-400 ring-2 ring-red-200' : 'border-orange-200'
+			}`}
+			required
+		/>
 	</label>
 	{#if !isHcmProvince}
 		<div class="sm:col-span-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">

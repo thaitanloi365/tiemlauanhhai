@@ -40,7 +40,7 @@
 <Header onOpenCart={() => (cartOpen = true)} />
 
 <main>
-	<section class="container-shell space-y-5 py-8">
+	<section class="container-shell space-y-3 py-5">
 		<div class="flex items-end justify-between gap-3">
 			<div>
 				<h1 class="text-3xl font-semibold md:text-4xl">Thực đơn</h1>
@@ -53,7 +53,7 @@
 			selectedSort={data.filters.sort}
 		/>
 
-		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+		<div class="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
 			{#each data.menuItems as item (item.id)}
 				<MenuItemCard {item} onQuickAdd={quickAdd} />
 			{/each}

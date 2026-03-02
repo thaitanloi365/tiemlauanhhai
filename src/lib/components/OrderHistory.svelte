@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { formatCurrency, statusClass, statusLabel } from '$lib/utils/format';
 	import type { Order } from '$lib/types';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 
 	let { orders } = $props<{ orders: Order[] }>();
 	let nowMs = $state(Date.now());
@@ -63,9 +64,9 @@
 							</p>
 						{/if}
 					</div>
-					<span class={`rounded-full px-2 py-1 text-xs font-medium ${statusClass(order.status)}`}>
+					<Badge class={statusClass(order.status)}>
 						{statusLabel(order.status)}
-					</span>
+					</Badge>
 				</div>
 			</a>
 		{/each}

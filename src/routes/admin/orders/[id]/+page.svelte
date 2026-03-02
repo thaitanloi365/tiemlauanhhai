@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { formatCurrency, statusLabel } from '$lib/utils/format';
+	const queryClient = useQueryClient();
 
-	let loading = $state(true);
 	let order = $state<any>(null);
 	let items = $state<any[]>([]);
 	let logs = $state<any[]>([]);
@@ -39,22 +45,15 @@ function formatScheduledFor(value: string | null | undefined) {
 
 	const statusOptions = ['pending', 'confirmed', 'preparing', 'shipping', 'delivered', 'cancelled'];
 
-	async function loadDetail() {
-		loading = true;
+	const detailQuery = createQuery(() => ({
+		queryKey: ['admin', 'order-detail', page.params.id],
+		queryFn: async () => {
 		const res = await fetch(`/api/admin/orders/${page.params.id}`);
 		const data = await res.json();
-		if (res.ok) {
-			order = data.order;
-			items = data.items;
-			logs = data.logs;
-			status = order.status;
-			trackingId = order.tracking_id ?? '';
-			trackingUrl = order.tracking_url ?? '';
-		} else {
-			message = data.message ?? 'Không tải được đơn hàng';
+			if (!res.ok) throw new Error(data.message ?? 'Không tải được đơn hàng');
+			return data;
 		}
-		loading = false;
-	}
+	}));
 
 	async function save() {
 		const res = await fetch(`/api/admin/orders/${page.params.id}`, {
@@ -68,21 +67,32 @@ function formatScheduledFor(value: string | null | undefined) {
 		});
 		const data = await res.json();
 		message = res.ok ? 'Đã cập nhật đơn hàng.' : (data.message ?? 'Không thể cập nhật');
-		if (res.ok) loadDetail();
+		if (res.ok) await queryClient.invalidateQueries({ queryKey: ['admin', 'order-detail', page.params.id] });
 	}
 
 	$effect(() => {
-		loadDetail();
+		if (!detailQuery.data) return;
+		order = detailQuery.data.order;
+		items = detailQuery.data.items;
+		logs = detailQuery.data.logs;
+		status = order.status;
+		trackingId = order.tracking_id ?? '';
+		trackingUrl = order.tracking_url ?? '';
 	});
 </script>
 
 <main class="container-shell space-y-4">
 	<h1 class="text-3xl font-bold">Chi tiết đơn (Admin)</h1>
-	{#if loading}
-		<p class="card-surface p-4">Đang tải...</p>
+	{#if detailQuery.isPending}
+		<p class="rounded-md border p-4 text-muted-foreground">Đang tải...</p>
+	{:else if detailQuery.isError}
+		<p class="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-destructive">
+			{detailQuery.error?.message ?? 'Không tải được đơn hàng'}
+		</p>
 	{:else if order}
 		<section class="grid gap-4 lg:grid-cols-2">
-			<div class="card-surface p-4">
+			<Card.Root>
+				<Card.Content class="p-4">
 				<h2 class="text-xl font-semibold">Thông tin đơn</h2>
 				<p class="mt-2 text-sm">Khách: {order.customer_name}</p>
 				{#if order.scheduled_for}
@@ -120,30 +130,37 @@ function formatScheduledFor(value: string | null | undefined) {
 					</div>
 				{/if}
 				<div class="mt-4 space-y-2">
-					<label class="block text-sm">
-						<span class="mb-1 block">Trạng thái</span>
-						<select bind:value={status} class="w-full rounded-xl border border-orange-200 px-3 py-2">
+					<div class="grid gap-2 text-sm">
+						<Label>Trạng thái</Label>
+						<Select.Root type="single" bind:value={status}>
+							<Select.Trigger class="w-full">
+								{statusLabel(status)}
+							</Select.Trigger>
+							<Select.Content>
 							{#each statusOptions as option}
-								<option value={option}>{statusLabel(option)}</option>
+								<Select.Item value={option} label={statusLabel(option)}>{statusLabel(option)}</Select.Item>
 							{/each}
-						</select>
-					</label>
-					<label class="block text-sm">
-						<span class="mb-1 block">Tracking ID</span>
-						<input bind:value={trackingId} class="w-full rounded-xl border border-orange-200 px-3 py-2" />
-					</label>
-					<label class="block text-sm">
-						<span class="mb-1 block">Tracking URL</span>
-						<input bind:value={trackingUrl} class="w-full rounded-xl border border-orange-200 px-3 py-2" />
-					</label>
+							</Select.Content>
+						</Select.Root>
+					</div>
+					<div class="grid gap-2 text-sm">
+						<Label for="tracking-id">Tracking ID</Label>
+						<Input id="tracking-id" bind:value={trackingId} />
+					</div>
+					<div class="grid gap-2 text-sm">
+						<Label for="tracking-url">Tracking URL</Label>
+						<Input id="tracking-url" bind:value={trackingUrl} />
+					</div>
 				</div>
-				<button class="btn-primary mt-4" type="button" onclick={save}>Lưu thay đổi</button>
+				<Button class="mt-4" type="button" onclick={save}>Lưu thay đổi</Button>
 				{#if message}
 					<p class="mt-2 text-sm text-slate-700">{message}</p>
 				{/if}
-			</div>
+				</Card.Content>
+			</Card.Root>
 
-			<div class="card-surface p-4">
+			<Card.Root>
+				<Card.Content class="p-4">
 				<h2 class="text-xl font-semibold">Món đã đặt</h2>
 				<ul class="mt-2 space-y-2 text-sm">
 					{#each items as item}
@@ -174,9 +191,10 @@ function formatScheduledFor(value: string | null | undefined) {
 						</li>
 					{/each}
 				</ul>
-			</div>
+				</Card.Content>
+			</Card.Root>
 		</section>
 	{:else}
-		<p class="card-surface p-4 text-red-700">{message || 'Không tìm thấy đơn.'}</p>
+		<p class="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-destructive">{message || 'Không tìm thấy đơn.'}</p>
 	{/if}
 </main>

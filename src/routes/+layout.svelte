@@ -1,12 +1,21 @@
 <script lang="ts">
 	import { dev } from '$app/environment';
 	import { onNavigate } from '$app/navigation';
+	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
 	import { inject } from '@vercel/analytics';
 	import { injectSpeedInsights } from '@vercel/speed-insights';
 	import { LOGO_IMAGE } from '$lib/constants/assets';
 	import '../app.css';
 
 	let { children } = $props();
+	const queryClient = new QueryClient({
+		defaultOptions: {
+			queries: {
+				staleTime: 30_000,
+				refetchOnWindowFocus: false
+			}
+		}
+	});
 
 	if (!dev) {
 		inject();
@@ -36,4 +45,6 @@
 	<meta name="theme-color" content="#F47B20" />
 </svelte:head>
 
-{@render children()}
+<QueryClientProvider client={queryClient}>
+	{@render children()}
+</QueryClientProvider>

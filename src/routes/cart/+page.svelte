@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { tick } from 'svelte';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import Header from '$lib/components/Header.svelte';
@@ -120,6 +121,7 @@ function parseVietnamDateString(value: string) {
 	let submitting = $state(false);
 	let showConfirm = $state(false);
 	let errorMessage = $state('');
+	let invalidFields = $state<string[]>([]);
 	const canonicalUrl = $derived(`${page.url.origin}/cart`);
 	const selectedScheduleOption = $derived(
 		scheduleDateOptions.find((option) => option.value === form.scheduledDate) ?? null
@@ -142,18 +144,61 @@ function parseVietnamDateString(value: string) {
 		}
 	});
 
-	function openConfirm() {
+	$effect(() => {
+		if (invalidFields.length === 0) return;
+		const missingSet = new Set(getMissingFields());
+		invalidFields = invalidFields.filter((field) => missingSet.has(field));
+	});
+
+	function fieldIsEmpty(value: string) {
+		return value.trim().length === 0;
+	}
+
+	function getMissingFields() {
+		const missing: string[] = [];
+		if (fieldIsEmpty(form.customerName)) missing.push('customerName');
+		if (fieldIsEmpty(form.phone)) missing.push('phone');
+		if (fieldIsEmpty(form.address)) missing.push('address');
+		if (fieldIsEmpty(form.district)) missing.push('district');
+		if (fieldIsEmpty(form.ward)) missing.push('ward');
+		if (fieldIsEmpty(form.scheduledDate)) missing.push('scheduledDate');
+		if (fieldIsEmpty(form.scheduledSlot)) missing.push('scheduledSlot');
+		return missing;
+	}
+
+	const focusTargetByField: Record<string, string> = {
+		customerName: 'customerName',
+		phone: 'phone',
+		address: 'address',
+		district: 'district',
+		ward: 'ward',
+		scheduledDate: 'scheduledDate',
+		scheduledSlot: 'scheduledSlot'
+	};
+
+	async function focusFirstInvalidField(field: string) {
+		await tick();
+		const targetName = focusTargetByField[field];
+		if (!targetName) return;
+		const target = document.querySelector<HTMLElement>(`[name="${targetName}"]`);
+		if (!target) return;
+		target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		target.focus();
+	}
+
+	async function openConfirm() {
 		errorMessage = '';
+		invalidFields = [];
 		if ($cartStore.length === 0) {
 			errorMessage = 'Giỏ hàng đang trống.';
 			return;
 		}
-		if (!form.customerName || !form.phone || !form.address || !form.district || !form.ward) {
+
+		const missingFields = getMissingFields();
+		if (missingFields.length > 0) {
+			invalidFields = missingFields;
 			errorMessage = 'Vui lòng điền đầy đủ thông tin đặt món trước khi xác nhận.';
-			return;
-		}
-		if (!form.scheduledDate || !form.scheduledSlot) {
-			errorMessage = 'Vui lòng chọn ngày và khung giờ nhận món.';
+			await focusFirstInvalidField(missingFields[0]);
 			return;
 		}
 		if (form.province !== HCMC_PROVINCE_NAME) {
@@ -296,6 +341,7 @@ function parseVietnamDateString(value: string) {
 					dateOptions={scheduleDateOptions}
 					slotOptions={scheduleSlotOptions}
 					{submitting}
+					{invalidFields}
 				/>
 			</div>
 			{#if errorMessage}

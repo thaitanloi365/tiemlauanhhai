@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isStrongPassword, strongPasswordGuideline } from './password-policy';
 
 const vnPhoneRegex = /^(?:\+84|84|0)(?:3|5|7|8|9)\d{8}$/;
 const canonicalUuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,9 +53,15 @@ export const adminLoginSchema = z.object({
 
 export const employeeRoleSchema = z.enum(['super_admin', 'manager']);
 
+const strongPasswordSchema = z
+	.string()
+	.min(8, 'Mật khẩu cần ít nhất 8 ký tự')
+	.max(200)
+	.refine((value) => isStrongPassword(value), strongPasswordGuideline);
+
 export const employeeSchema = z.object({
 	email: z.string().trim().email('Email không hợp lệ'),
-	password: z.string().min(8, 'Mật khẩu cần ít nhất 8 ký tự').max(200),
+	password: strongPasswordSchema,
 	role: employeeRoleSchema,
 	displayName: z.string().trim().max(120).optional().nullable()
 });
@@ -67,7 +74,7 @@ export const employeeUpdateSchema = z.object({
 export const changePasswordSchema = z
 	.object({
 		currentPassword: z.string().min(8, 'Mật khẩu hiện tại không hợp lệ').max(200),
-		newPassword: z.string().min(8, 'Mật khẩu mới cần ít nhất 8 ký tự').max(200)
+		newPassword: strongPasswordSchema
 	})
 	.refine((payload) => payload.currentPassword !== payload.newPassword, {
 		message: 'Mật khẩu mới phải khác mật khẩu hiện tại',

@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
+
 	let {
 		onSubmit,
 		disabled = false
@@ -22,29 +26,31 @@
 	}
 </script>
 
-<div class="card-surface p-4">
+<Card.Root>
+	<Card.Content class="p-4">
 	<h3 class="text-lg font-semibold">Đánh giá đơn hàng</h3>
 	<div class="mt-3 flex gap-2">
 		{#each [1, 2, 3, 4, 5] as star}
-			<button
+			<Button
 				type="button"
-				class={`size-10 rounded-full border text-lg ${
-					star <= rating ? 'border-orange-400 bg-orange-100' : 'border-orange-100'
-				}`}
+				variant={star <= rating ? 'default' : 'outline'}
+				size="icon"
+				class="rounded-full text-lg"
 				onclick={() => (rating = star)}
 				disabled={disabled || loading}
 			>
 				★
-			</button>
+			</Button>
 		{/each}
 	</div>
-	<textarea
-		class="mt-3 h-24 w-full rounded-xl border border-orange-200 px-3 py-2"
+	<Textarea
+		class="mt-3 h-24"
 		bind:value={comment}
 		placeholder="Chia sẻ trải nghiệm món ăn..."
 		disabled={disabled || loading}
-	></textarea>
-	<button class="btn-primary mt-3 w-full" type="button" onclick={submit} disabled={disabled || loading}>
+	></Textarea>
+	<Button class="mt-3 w-full" type="button" onclick={submit} disabled={disabled || loading}>
 		{loading ? 'Đang gửi...' : 'Gửi đánh giá'}
-	</button>
-</div>
+	</Button>
+	</Card.Content>
+</Card.Root>

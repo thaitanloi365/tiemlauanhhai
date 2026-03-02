@@ -1,4 +1,7 @@
 <script lang="ts">
+	import * as Card from '$lib/components/ui/card/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
+
 	let { selectedPrice = '', selectedSort = 'popular' } = $props<{
 		selectedPrice?: string;
 		selectedSort?: string;
@@ -13,43 +16,53 @@
 	];
 </script>
 
-<div class="card-surface p-4">
+<Card.Root>
+	<Card.Content class="p-4">
 	<div class="grid gap-2 sm:grid-cols-2">
-		<label class="text-sm">
+		<div class="text-sm">
 			<span class="mb-1 block font-medium">Mức giá</span>
-			<select
-				class="w-full rounded-xl border border-orange-200 bg-white px-3 py-2"
+			<Select.Root
+				type="single"
 				value={selectedPrice}
-				onchange={(event) => {
-					const value = (event.currentTarget as HTMLSelectElement).value;
+				onValueChange={(value: string) => {
 					const params = new URLSearchParams(location.search);
 					if (value) params.set('price', value);
 					else params.delete('price');
 					location.href = `/menu?${params.toString()}`;
 				}}
 			>
-				{#each priceRanges as price}
-					<option value={price.value}>{price.label}</option>
-				{/each}
-			</select>
-		</label>
-		<label class="text-sm">
+				<Select.Trigger class="w-full">
+					{priceRanges.find((price) => price.value === selectedPrice)?.label ?? 'Tất cả mức giá'}
+				</Select.Trigger>
+				<Select.Content>
+					{#each priceRanges as price}
+						<Select.Item value={price.value} label={price.label}>{price.label}</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+		</div>
+		<div class="text-sm">
 			<span class="mb-1 block font-medium">Sắp xếp</span>
-			<select
-				class="w-full rounded-xl border border-orange-200 bg-white px-3 py-2"
+			<Select.Root
+				type="single"
 				value={selectedSort}
-				onchange={(event) => {
-					const value = (event.currentTarget as HTMLSelectElement).value;
+				onValueChange={(value: string) => {
 					const params = new URLSearchParams(location.search);
 					if (value) params.set('sort', value);
 					else params.delete('sort');
 					location.href = `/menu?${params.toString()}`;
 				}}
 			>
-				<option value="popular">Phổ biến</option>
-				<option value="price_asc">Giá thấp đến cao</option>
-				<option value="price_desc">Giá cao đến thấp</option>
-			</select>
-		</label>
+				<Select.Trigger class="w-full">
+					{selectedSort === 'price_asc' ? 'Giá thấp đến cao' : selectedSort === 'price_desc' ? 'Giá cao đến thấp' : 'Phổ biến'}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Item value="popular" label="Phổ biến">Phổ biến</Select.Item>
+					<Select.Item value="price_asc" label="Giá thấp đến cao">Giá thấp đến cao</Select.Item>
+					<Select.Item value="price_desc" label="Giá cao đến thấp">Giá cao đến thấp</Select.Item>
+				</Select.Content>
+			</Select.Root>
+		</div>
 	</div>
-</div>
+	</Card.Content>
+</Card.Root>

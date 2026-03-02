@@ -2,6 +2,8 @@
 	import { cartCount } from '$lib/stores/cart';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 
 	let { onOpenCart } = $props<{ onOpenCart?: () => void }>();
 	let currentPath = $derived(page.url.pathname);
@@ -21,13 +23,11 @@
 	}
 </script>
 
-<button type="button" class="relative btn-secondary" onclick={handleClick} aria-label="Mở giỏ hàng">
+<Button type="button" variant="outline" class="relative" onclick={handleClick} aria-label="Mở giỏ hàng">
 	<span>Giỏ hàng</span>
 	{#if $cartCount > 0}
-		<span
-			class="absolute -right-2 -top-2 inline-flex size-6 items-center justify-center rounded-full bg-orange-500 text-xs font-semibold text-white"
-		>
+		<Badge class="absolute -right-2 -top-2 inline-flex size-6 items-center justify-center rounded-full p-0 text-xs font-semibold">
 			{$cartCount}
-		</span>
+		</Badge>
 	{/if}
-</button>
+</Button>

@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { MENU_IMAGE } from '$lib/constants/assets';
 	import MenuItemForm from '$lib/components/admin/MenuItemForm.svelte';
-	import { onMount } from 'svelte';
+	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 
+	const queryClient = useQueryClient();
 	let items = $state<any[]>([]);
 	let categories = $state<any[]>([]);
-	let loading = $state(true);
 	let message = $state('');
 	let savingId = $state<string | null>(null);
 
@@ -32,18 +37,17 @@
 		});
 	});
 
-	async function loadMenu() {
-		loading = true;
-		const res = await fetch('/api/admin/menu');
-		const data = await res.json();
-		if (res.ok) {
-			items = data.items ?? [];
-			categories = data.categories ?? [];
-		} else {
-			message = data.message ?? 'Không tải được menu';
+	const menuQuery = createQuery(() => ({
+		queryKey: ['admin', 'menu'],
+		queryFn: async () => {
+			const res = await fetch('/api/admin/menu', { cache: 'no-store' });
+			const data = await res.json();
+			if (!res.ok) {
+				throw new Error(data.message ?? 'Không tải được menu');
+			}
+			return data;
 		}
-		loading = false;
-	}
+	}));
 
 	function openCreateForm() {
 		selectedItem = null;
@@ -53,6 +57,24 @@
 	function openEditForm(item: any) {
 		selectedItem = item;
 		showForm = true;
+	}
+
+	function handleSaved(savedItem?: any) {
+		if (savedItem?.id) {
+			queryClient.setQueryData(['admin', 'menu'], (previous: any) => {
+				if (!previous) return previous;
+				const previousItems = previous.items ?? [];
+				const exists = previousItems.some((entry: any) => entry.id === savedItem.id);
+				const items = exists
+					? previousItems.map((entry: any) => (entry.id === savedItem.id ? { ...entry, ...savedItem } : entry))
+					: [savedItem, ...previousItems];
+				return {
+					...previous,
+					items
+				};
+			});
+		}
+		queryClient.invalidateQueries({ queryKey: ['admin', 'menu'] });
 	}
 
 	async function toggleAvailable(item: any) {
@@ -81,11 +103,13 @@
 		const data = await res.json();
 		message = res.ok ? '' : (data.message ?? 'Không cập nhật được trạng thái');
 		savingId = null;
-		if (res.ok) loadMenu();
+		if (res.ok) await queryClient.invalidateQueries({ queryKey: ['admin', 'menu'] });
 	}
 
-	onMount(() => {
-		loadMenu();
+	$effect(() => {
+		if (!menuQuery.data) return;
+		items = menuQuery.data.items ?? [];
+		categories = menuQuery.data.categories ?? [];
 	});
 </script>
 
@@ -93,46 +117,55 @@
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<div>
 			<h1 class="text-3xl font-bold">Quản lý menu</h1>
-			<p class="mt-1 text-sm text-slate-600">Thêm, chỉnh sửa món và quản lý trạng thái hiển thị.</p>
+			<p class="mt-1 text-sm text-muted-foreground">Thêm, chỉnh sửa món và quản lý trạng thái hiển thị.</p>
 		</div>
-		<button class="btn-primary" type="button" onclick={openCreateForm}>Thêm món mới</button>
+		<Button type="button" onclick={openCreateForm}>Thêm món mới</Button>
 	</div>
 
-	<section class="card-surface p-4">
+	<Card.Root>
+		<Card.Content class="px-4 py-1">
 		<div class="grid gap-3 md:grid-cols-3">
-			<input
-				class="rounded-xl border border-orange-200 bg-white px-3 py-2"
-				bind:value={search}
-				placeholder="Tìm theo tên món"
-			/>
-			<select class="rounded-xl border border-orange-200 bg-white px-3 py-2" bind:value={categoryFilter}>
-				<option value="all">Tất cả danh mục</option>
-				{#each categories as category}
-					<option value={category.id}>{category.name}</option>
-				{/each}
-			</select>
-			<select class="rounded-xl border border-orange-200 bg-white px-3 py-2" bind:value={availabilityFilter}>
-				<option value="all">Tất cả trạng thái</option>
-				<option value="available">Đang bán</option>
-				<option value="hidden">Đang ẩn</option>
-			</select>
+			<Input bind:value={search} placeholder="Tìm theo tên món" />
+			<Select.Root type="single" bind:value={categoryFilter}>
+				<Select.Trigger class="w-full">
+					{categoryFilter === 'all' ? 'Tất cả danh mục' : (categories.find((c) => c.id === categoryFilter)?.name ?? 'Danh mục')}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Item value="all" label="Tất cả danh mục">Tất cả danh mục</Select.Item>
+					{#each categories as category}
+						<Select.Item value={category.id} label={category.name}>{category.name}</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+			<Select.Root type="single" bind:value={availabilityFilter}>
+				<Select.Trigger class="w-full">
+					{availabilityFilter === 'all' ? 'Tất cả trạng thái' : availabilityFilter === 'available' ? 'Đang bán' : 'Đang ẩn'}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Item value="all" label="Tất cả trạng thái">Tất cả trạng thái</Select.Item>
+					<Select.Item value="available" label="Đang bán">Đang bán</Select.Item>
+					<Select.Item value="hidden" label="Đang ẩn">Đang ẩn</Select.Item>
+				</Select.Content>
+			</Select.Root>
 		</div>
-	</section>
+		</Card.Content>
+	</Card.Root>
 
 	{#if message}
-		<p class="rounded-lg bg-orange-100 px-3 py-2 text-sm text-orange-900">{message}</p>
+		<p class="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{message}</p>
 	{/if}
 
-	<section class="card-surface p-4">
+	<Card.Root>
+		<Card.Content class="p-4">
 		<div class="flex items-center justify-between">
 			<h2 class="text-xl font-semibold">Danh sách món</h2>
-			<p class="text-sm text-slate-600">{filteredItems.length} món</p>
+			<p class="text-sm text-muted-foreground">{filteredItems.length} món</p>
 		</div>
 
-		{#if loading}
+		{#if menuQuery.isPending}
 			<div class="mt-4 grid gap-3 lg:grid-cols-2">
 				{#each Array.from({ length: 6 }) as _, index (`menu-skeleton-${index}`)}
-					<div class="rounded-xl border border-orange-200 bg-white p-3 shadow-sm">
+					<div class="rounded-xl border border-orange-200 bg-orange-50/80 p-3">
 						<div class="animate-pulse">
 							<div class="flex gap-3">
 								<div class="h-20 w-20 rounded-lg bg-orange-100"></div>
@@ -147,24 +180,30 @@
 					</div>
 				{/each}
 			</div>
+		{:else if menuQuery.isError}
+			<p class="mt-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+				{menuQuery.error?.message ?? 'Không tải được menu'}
+			</p>
 		{:else if filteredItems.length === 0}
-			<p class="mt-3 rounded-xl bg-white px-3 py-4 text-sm text-slate-600">Không có món nào khớp bộ lọc.</p>
+			<p class="mt-3 rounded-xl bg-muted/60 px-3 py-4 text-sm text-muted-foreground">
+				Không có món nào khớp bộ lọc.
+			</p>
 		{:else}
 			<div class="mt-4 grid gap-3 lg:grid-cols-2">
 				{#each filteredItems as item}
-					<div class="rounded-xl border border-orange-200 bg-white p-3 shadow-sm">
+					<div class="rounded-xl border border-orange-200 bg-orange-50/80 p-3">
 						<div class="flex gap-3">
 							<img src={item.thumbnail_url || MENU_IMAGE} alt={item.name} class="h-20 w-20 rounded-lg object-cover" />
 							<div class="min-w-0 flex-1">
 								<p class="truncate font-semibold">{item.name}</p>
 								<p class="truncate text-xs text-slate-500">{item.slug}</p>
 								<div class="mt-2 flex flex-wrap items-center gap-2">
-									<span class="rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-800">
+									<Badge variant="secondary">
 										{categoryNameMap.get(item.category_id) ?? 'Danh mục'}
-									</span>
-									<span class={`rounded-full px-2 py-1 text-xs font-medium ${item.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+									</Badge>
+									<Badge variant={item.is_available ? 'default' : 'outline'}>
 										{item.is_available ? 'Đang bán' : 'Đang ẩn'}
-									</span>
+									</Badge>
 								</div>
 							</div>
 						</div>
@@ -178,18 +217,19 @@
 									disabled={savingId === item.id}
 									onchange={() => toggleAvailable(item)}
 								/>
-								<span class="relative h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-emerald-500">
-									<span class="absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
+								<span class="relative h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-orange-500">
+									<span class="absolute left-0.5 top-0.5 size-5 rounded-full bg-white transition peer-checked:translate-x-5"></span>
 								</span>
 								<span>{item.is_available ? 'Đang bán' : 'Đang ẩn'}</span>
 							</label>
-							<button class="btn-secondary px-3 py-2 text-sm" type="button" onclick={() => openEditForm(item)}>Chỉnh sửa</button>
+							<Button variant="outline" size="sm" type="button" onclick={() => openEditForm(item)}>Chỉnh sửa</Button>
 						</div>
 					</div>
 				{/each}
 			</div>
 		{/if}
-	</section>
+		</Card.Content>
+	</Card.Root>
 </main>
 
 <MenuItemForm
@@ -197,5 +237,5 @@
 	categories={categories}
 	item={selectedItem}
 	onClose={() => (showForm = false)}
-	onSaved={loadMenu}
+	onSaved={handleSaved}
 />

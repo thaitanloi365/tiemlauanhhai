@@ -1,4 +1,10 @@
 <script lang="ts">
+	import { isStrongPassword, strongPasswordGuideline } from '$lib/utils/password-policy';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+
 	let currentPassword = $state('');
 	let newPassword = $state('');
 	let confirmPassword = $state('');
@@ -16,6 +22,14 @@
 		}
 		if (newPassword !== confirmPassword) {
 			errorMessage = 'Mật khẩu xác nhận không khớp.';
+			return;
+		}
+		if (!isStrongPassword(newPassword)) {
+			errorMessage = strongPasswordGuideline;
+			return;
+		}
+		if (newPassword === currentPassword) {
+			errorMessage = 'Mật khẩu mới phải khác mật khẩu hiện tại.';
 			return;
 		}
 
@@ -46,53 +60,47 @@
 <main class="container-shell space-y-4">
 	<div>
 		<h1 class="text-3xl font-bold">Cài đặt tài khoản</h1>
-		<p class="mt-1 text-sm text-slate-600">Đổi mật khẩu cho tài khoản quản trị hiện tại.</p>
+		<p class="mt-1 text-sm text-muted-foreground">Đổi mật khẩu cho tài khoản quản trị hiện tại.</p>
 	</div>
 
-	<section class="card-surface max-w-xl p-5">
-		<h2 class="text-lg font-semibold">Đổi mật khẩu</h2>
-		<div class="mt-4 space-y-3">
-			<label class="block text-sm">
-				<span class="mb-1 block font-medium">Mật khẩu hiện tại</span>
-				<input
-					class="w-full rounded-xl border border-orange-200 bg-white px-3 py-2"
-					type="password"
-					bind:value={currentPassword}
-					placeholder="••••••••"
-				/>
-			</label>
+	<Card.Root class="max-w-xl">
+		<Card.Header>
+			<Card.Title>Đổi mật khẩu</Card.Title>
+		</Card.Header>
+		<Card.Content class="space-y-4">
+			<div class="grid gap-2">
+				<Label for="current-password">Mật khẩu hiện tại</Label>
+				<Input id="current-password" type="password" bind:value={currentPassword} placeholder="••••••••" />
+			</div>
 
-			<label class="block text-sm">
-				<span class="mb-1 block font-medium">Mật khẩu mới</span>
-				<input
-					class="w-full rounded-xl border border-orange-200 bg-white px-3 py-2"
-					type="password"
-					bind:value={newPassword}
-					placeholder="Tối thiểu 8 ký tự"
-				/>
-			</label>
+			<div class="grid gap-2">
+				<Label for="new-password">Mật khẩu mới</Label>
+				<Input id="new-password" type="password" bind:value={newPassword} placeholder="Tối thiểu 8 ký tự" />
+				<p class="text-xs text-muted-foreground">{strongPasswordGuideline}</p>
+			</div>
 
-			<label class="block text-sm">
-				<span class="mb-1 block font-medium">Xác nhận mật khẩu mới</span>
-				<input
-					class="w-full rounded-xl border border-orange-200 bg-white px-3 py-2"
+			<div class="grid gap-2">
+				<Label for="confirm-password">Xác nhận mật khẩu mới</Label>
+				<Input
+					id="confirm-password"
 					type="password"
 					bind:value={confirmPassword}
 					placeholder="Nhập lại mật khẩu mới"
 					onkeydown={(event) => event.key === 'Enter' && !loading && changePassword()}
 				/>
-			</label>
-		</div>
+			</div>
 
-		{#if errorMessage}
-			<p class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>
-		{/if}
-		{#if successMessage}
-			<p class="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{successMessage}</p>
-		{/if}
-
-		<button class="btn-primary mt-4" type="button" onclick={changePassword} disabled={loading}>
-			{loading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
-		</button>
-	</section>
+			{#if errorMessage}
+				<p class="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{errorMessage}</p>
+			{/if}
+			{#if successMessage}
+				<p class="rounded-md border border-emerald-300/70 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{successMessage}</p>
+			{/if}
+		</Card.Content>
+		<Card.Footer>
+			<Button type="button" onclick={changePassword} disabled={loading}>
+				{loading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
+			</Button>
+		</Card.Footer>
+	</Card.Root>
 </main>

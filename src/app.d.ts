@@ -7,7 +7,8 @@ declare global {
 			adminUser?: {
 				id: string;
 				email: string;
-				role: string;
+				role: 'super_admin' | 'manager';
+				display_name?: string | null;
 			};
 			clientIp?: string;
 		}

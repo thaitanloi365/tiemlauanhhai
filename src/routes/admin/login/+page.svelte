@@ -28,10 +28,10 @@
 	}
 </script>
 
-<main class="container-shell flex min-h-[100dvh] items-center justify-center py-10">
+<main class="container-shell flex min-h-dvh items-center justify-center py-10">
 	<section class="card-surface w-full max-w-md p-6">
 		<h1 class="text-3xl font-bold">Admin Login</h1>
-		<p class="mt-2 text-sm text-slate-600">Chỉ tài khoản super admin mới truy cập được trang quản trị.</p>
+		<p class="mt-2 text-sm text-slate-600">Chỉ tài khoản admin hợp lệ mới truy cập được trang quản trị.</p>
 
 		<div class="mt-5 space-y-3">
 			<label class="block text-sm">

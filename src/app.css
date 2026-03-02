@@ -22,6 +22,44 @@ body {
 	font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+input[type='radio'] {
+	-webkit-appearance: none;
+	appearance: none;
+	inline-size: 1.125rem;
+	block-size: 1.125rem;
+	border: 1.5px solid #c7c7cc;
+	border-radius: 9999px;
+	background-color: #fff;
+	background-clip: content-box;
+	padding: 0.18rem;
+	flex-shrink: 0;
+	vertical-align: middle;
+	cursor: pointer;
+	transition:
+		border-color 160ms ease,
+		box-shadow 160ms ease,
+		background-color 160ms ease;
+}
+
+input[type='radio']:checked {
+	border-color: var(--color-primary);
+	background-color: var(--color-primary);
+}
+
+input[type='radio']:hover {
+	border-color: #b5b5be;
+}
+
+input[type='radio']:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(244, 123, 32, 0.22);
+}
+
+input[type='radio']:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
 h1,
 h2,
 h3,
@@ -43,6 +81,20 @@ h4 {
 
 .btn-secondary {
 	@apply inline-flex min-h-11 items-center justify-center rounded-xl border border-orange-300 bg-white px-4 py-2 font-medium text-orange-800 transition hover:bg-orange-50 active:scale-[0.98];
+}
+
+/* Consistent cursor feedback for action controls */
+button,
+a.btn-primary,
+a.btn-secondary {
+	cursor: pointer;
+}
+
+button:disabled,
+button[aria-disabled='true'],
+a.btn-primary[aria-disabled='true'],
+a.btn-secondary[aria-disabled='true'] {
+	cursor: not-allowed;
 }
 
 @keyframes reveal-fade-up {

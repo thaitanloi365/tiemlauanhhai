@@ -5,7 +5,7 @@
 	import Header from '$lib/components/Header.svelte';
 	import OrderConfirmModal from '$lib/components/OrderConfirmModal.svelte';
 	import OrderForm from '$lib/components/OrderForm.svelte';
-	import { HCMC_PROVINCE_NAME } from '$lib/data/provinces';
+	import { HCMC_PROVINCE_NAME } from '$lib/data/provinces-old';
 	import { cartStore, cartTotal } from '$lib/stores/cart';
 	import { sessionStore } from '$lib/stores/session';
 	import { formatCurrency } from '$lib/utils/format';
@@ -27,7 +27,7 @@
 	}
 
 	function toVietnamClock(now: Date) {
-		return new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60 * 1000);
+		return new Date(now.getTime() + 7 * 60 * 60 * 1000);
 	}
 
 	function toVietnamDateString(vnDate: Date) {
@@ -37,19 +37,32 @@
 		return `${year}-${month}-${day}`;
 	}
 
+function parseVietnamDateString(value: string) {
+	const [yearText, monthText, dayText] = value.split('-');
+	const year = Number(yearText);
+	const month = Number(monthText);
+	const day = Number(dayText);
+	if (!year || !month || !day) return null;
+	return new Date(Date.UTC(year, month - 1, day));
+}
+
 	function getCutoffHour(vnDate: Date) {
 		const dayOfWeek = vnDate.getUTCDay();
 		return dayOfWeek === 0 || dayOfWeek === 6 ? 16 : 14;
-	}
-
-	function fromVietnamDateString(value: string) {
-		return new Date(`${value}T00:00:00+07:00`);
 	}
 
 	function buildScheduleDateOptions(now: Date = new Date()): ScheduleOption[] {
 		const vnNow = toVietnamClock(now);
 		const startOffset = vnNow.getUTCHours() >= getCutoffHour(vnNow) ? 1 : 0;
 		const options: ScheduleOption[] = [];
+
+	function getRelativeDayLabel(offset: number) {
+		if (offset === 0) return 'Hôm nay';
+		if (offset === 1) return 'Ngày mai';
+		if (offset === 2) return 'Ngày kia';
+		return `${offset} ngày nữa`;
+	}
+
 		for (let offset = startOffset; offset <= 7; offset += 1) {
 			const vnDay = new Date(
 				Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate() + offset)
@@ -64,7 +77,7 @@
 			}).format(dateForLabel);
 			options.push({
 				value: dateValue,
-				label: offset === 0 ? `Hôm nay (${labelDate})` : labelDate
+			label: `${getRelativeDayLabel(offset)} (${labelDate})`
 			});
 		}
 		return options;
@@ -74,13 +87,18 @@
 		if (!selectedDate) return [...TIME_SLOTS];
 		const vnNow = toVietnamClock(now);
 		const todayInVietnam = toVietnamDateString(vnNow);
-		if (selectedDate !== todayInVietnam) return [...TIME_SLOTS];
+	if (selectedDate < todayInVietnam) return [];
+	if (selectedDate > todayInVietnam) return [...TIME_SLOTS];
 
-		const selectedVnDate = fromVietnamDateString(selectedDate);
+	const selectedVnDate = parseVietnamDateString(selectedDate);
+	if (!selectedVnDate) return [];
 		const cutoffHour = getCutoffHour(selectedVnDate);
-		const currentHour = vnNow.getUTCHours();
+	const currentMinuteOfDay = vnNow.getUTCHours() * 60 + vnNow.getUTCMinutes();
 
-		return TIME_SLOTS.filter((slot) => slot.endHour <= cutoffHour && slot.endHour > currentHour);
+	return TIME_SLOTS.filter((slot) => {
+		const slotStartMinute = slot.startHour * 60;
+		return slot.endHour <= cutoffHour && slotStartMinute >= currentMinuteOfDay;
+	});
 	}
 
 	const scheduleDateOptions = buildScheduleDateOptions();
@@ -203,34 +221,63 @@
 
 <Header />
 
-<main class="container-shell grid gap-6 py-6 lg:grid-cols-[1.1fr,0.9fr]">
+<main
+	class={`container-shell grid gap-6 py-6 ${
+		$cartStore.length > 0 ? 'lg:grid-cols-[1.1fr,0.9fr]' : ''
+	}`}
+>
 	<section class="space-y-3">
 		<h1 class="text-3xl font-bold">Giỏ hàng</h1>
 		{#if $cartStore.length === 0}
-			<p class="card-surface p-4 text-sm">
-				Chưa có món nào trong giỏ.
-				<button
-					type="button"
-					class="ml-1 font-medium text-orange-700 underline decoration-orange-300 underline-offset-2"
-					onclick={() => goto('/menu')}
-				>
-					Xem menu
-				</button>.
-			</p>
+			<div class="card-surface space-y-3 border border-orange-100 bg-orange-50/70 p-5">
+				<p class="text-sm font-medium text-orange-700">Giỏ hàng đang trống nè</p>
+				<h2 class="text-xl font-semibold text-slate-900">
+					Mình chọn vài món ngon rồi đặt luôn để quán chuẩn bị nhanh cho mình nha.
+				</h2>
+				<p class="text-sm text-slate-600">
+					Quay lại menu để thêm món, phần thông tin đặt món sẽ hiện ngay khi giỏ có sản phẩm.
+				</p>
+				<button class="btn-primary" type="button" onclick={() => goto('/menu')}>
+					Xem menu và chọn món
+				</button>
+			</div>
 		{:else}
 			<div class="space-y-3">
 				{#each $cartStore as line}
 					<div class="card-surface p-3">
-						<div class="flex items-start justify-between gap-3">
-							<div>
+						<div class="flex items-start justify-between gap-4">
+							<div class="min-w-0">
 								<p class="font-medium">{line.itemName}</p>
 								<p class="text-xs text-slate-500">{line.variantName}</p>
 								<p class="text-sm text-orange-700">{formatCurrency(line.price)}</p>
 							</div>
-							<div class="inline-flex items-center rounded-xl border border-orange-200">
-								<button class="px-3 py-2" type="button" onclick={() => cartStore.updateQuantity(line.variantId, line.quantity - 1)}>-</button>
-								<span class="min-w-9 text-center">{line.quantity}</span>
-								<button class="px-3 py-2" type="button" onclick={() => cartStore.updateQuantity(line.variantId, line.quantity + 1)}>+</button>
+							<div class="flex shrink-0 items-center gap-4">
+								<button
+									class="text-sm leading-none text-red-600"
+									type="button"
+									onclick={() => cartStore.remove(line.variantId)}
+								>
+									Xóa
+								</button>
+								<div class="inline-flex items-center rounded-xl border border-orange-200">
+									<button
+										class="px-3 py-2 disabled:opacity-55"
+										type="button"
+										disabled={line.quantity <= 1}
+										aria-disabled={line.quantity <= 1}
+										onclick={() => cartStore.updateQuantity(line.variantId, line.quantity - 1)}
+									>
+										-
+									</button>
+									<span class="min-w-9 text-center">{line.quantity}</span>
+									<button
+										class="px-3 py-2"
+										type="button"
+										onclick={() => cartStore.updateQuantity(line.variantId, line.quantity + 1)}
+									>
+										+
+									</button>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -239,19 +286,31 @@
 		{/if}
 	</section>
 
-	<section class="card-surface p-4">
-		<h2 class="text-2xl font-semibold">Thông tin đặt món</h2>
-		<p class="mt-1 text-sm text-slate-600">Tổng tiền: <strong>{formatCurrency($cartTotal)}</strong></p>
-		<div class="mt-4">
-			<OrderForm model={form} dateOptions={scheduleDateOptions} slotOptions={scheduleSlotOptions} {submitting} />
-		</div>
-		{#if errorMessage}
-			<p class="mt-3 text-sm text-red-700">{errorMessage}</p>
-		{/if}
-		<button class="btn-primary mt-4 w-full" type="button" onclick={openConfirm} disabled={submitting}>
-			Xác nhận đặt món
-		</button>
-	</section>
+	{#if $cartStore.length > 0}
+		<section class="card-surface p-4">
+			<h2 class="text-2xl font-semibold">Thông tin đặt món</h2>
+			<p class="mt-1 text-sm text-slate-600">Tổng tiền: <strong>{formatCurrency($cartTotal)}</strong></p>
+			<div class="mt-4">
+				<OrderForm
+					model={form}
+					dateOptions={scheduleDateOptions}
+					slotOptions={scheduleSlotOptions}
+					{submitting}
+				/>
+			</div>
+			{#if errorMessage}
+				<p class="mt-3 text-sm text-red-700">{errorMessage}</p>
+			{/if}
+			<button
+				class="btn-primary mt-4 w-full"
+				type="button"
+				onclick={openConfirm}
+				disabled={submitting}
+			>
+				Xác nhận đặt món
+			</button>
+		</section>
+	{/if}
 </main>
 
 {#if showConfirm}

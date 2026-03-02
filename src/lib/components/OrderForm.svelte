@@ -3,12 +3,8 @@
 	import { HCM_DISTRICTS_OLD } from '$lib/data/hcm-districts-old';
 	import { HCM_WARDS_NEW } from '$lib/data/hcm-wards-new';
 	import { HCM_WARDS_OLD } from '$lib/data/hcm-wards-old';
-	import {
-		HCMC_PROVINCE_CODE,
-		HCMC_PROVINCE_NAME,
-		PROVINCES_NEW,
-		PROVINCES_OLD
-	} from '$lib/data/provinces';
+	import { PROVINCES_NEW } from '$lib/data/provinces-new';
+	import { HCMC_PROVINCE_CODE, HCMC_PROVINCE_NAME, PROVINCES_OLD } from '$lib/data/provinces-old';
 
 	type AddressMode = 'old' | 'new';
 
@@ -112,8 +108,10 @@
 	function onPhoneInput(event: Event) {
 		const target = event.currentTarget as HTMLInputElement;
 		const normalized = normalizeVietnamPhoneInput(target.value);
+		const formatted = formatVietnamPhone(normalized);
 		model.phone = normalized;
-		phoneDisplayValue = formatVietnamPhone(normalized);
+		phoneDisplayValue = formatted;
+		target.value = formatted;
 	}
 
 	$effect(() => {
@@ -179,7 +177,7 @@
 	</label>
 	<label class="text-sm">
 		<span class="mb-1 block font-medium">SĐT</span>
-		<div class="flex w-full items-center rounded-xl border border-orange-200 bg-white">
+		<div class="flex w-full items-center rounded-xl border border-orange-200 bg-transparent">
 			<span
 				class="inline-flex items-center gap-1 border-r border-orange-200 px-3 py-2 text-sm font-medium text-slate-700"
 				aria-hidden="true"
@@ -190,7 +188,9 @@
 			<input
 				value={phoneDisplayValue}
 				oninput={onPhoneInput}
-				inputmode="tel"
+				type="tel"
+				inputmode="numeric"
+				pattern="[0-9 ]*"
 				class="w-full rounded-r-xl px-3 py-2 outline-none"
 				placeholder="0912 345 678"
 				required

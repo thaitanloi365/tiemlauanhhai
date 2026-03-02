@@ -2,18 +2,26 @@
 	import { page } from '$app/state';
 	import { LOGO_IMAGE } from '$lib/constants/assets';
 
-	let { adminEmail, open = false, onClose } = $props<{
+	let { adminEmail, adminRole = 'manager', open = false, onClose } = $props<{
 		adminEmail: string;
+		adminRole?: 'super_admin' | 'manager';
 		open?: boolean;
 		onClose?: () => void;
 	}>();
 
-	const navItems = [
-		{ href: '/admin', label: 'Dashboard' },
-		{ href: '/admin/statistics', label: 'Thống kê' },
-		{ href: '/admin/menu', label: 'Menu' },
-		{ href: '/admin/orders', label: 'Đơn hàng' }
-	];
+	const navItems = $derived.by(() => {
+		const items = [
+			{ href: '/admin', label: 'Dashboard' },
+			{ href: '/admin/statistics', label: 'Thống kê' },
+			{ href: '/admin/menu', label: 'Menu' },
+			{ href: '/admin/orders', label: 'Đơn hàng' }
+		];
+		if (adminRole === 'super_admin') {
+			items.push({ href: '/admin/employees', label: 'Nhân viên' });
+		}
+		items.push({ href: '/admin/settings', label: 'Cài đặt' });
+		return items;
+	});
 
 	let showLogoutConfirm = $state(false);
 
@@ -50,7 +58,7 @@
 				<p class="mt-1 text-xl font-semibold">Admin Panel</p>
 			</div>
 		</div>
-		<p class="mt-2 truncate text-sm text-orange-100/80">{adminEmail === 'super_admin' ? 'Admin' : adminEmail}</p>
+		<p class="mt-2 truncate text-sm text-orange-100/80">{adminEmail}</p>
 	</div>
 
 	<nav class="flex-1 space-y-1 px-3 py-4">

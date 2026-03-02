@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { MENU_IMAGE } from '$lib/constants/assets';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Cart from '$lib/components/Cart.svelte';
@@ -15,11 +17,25 @@
 	let copied = $state(false);
 	let cartOpen = $state(false);
 	let addonQuantities = $state<Record<string, number>>({});
+	let handledQuickAdd = $state(false);
 
 	$effect(() => {
 		if (!selectedVariantId) {
 			selectedVariantId = data.item.variants[0]?.id;
 		}
+	});
+
+	$effect(() => {
+		const shouldQuickAdd = page.url.searchParams.get('quickAdd') === '1';
+		if (!shouldQuickAdd || handledQuickAdd || !selectedVariant) return;
+
+		addToCart();
+		handledQuickAdd = true;
+		void goto(`/menu/${encodeURIComponent(data.item.slug)}`, {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
 	});
 
 	const selectedVariant = $derived(
@@ -139,12 +155,7 @@
 						class="flex cursor-pointer items-center justify-between rounded-xl border-[0.5px] border-orange-500/70 px-3 py-2"
 					>
 						<div class="flex items-center gap-2">
-							<input type="radio" class="peer sr-only" bind:group={selectedVariantId} value={variant.id} />
-							<span
-								class="flex h-5 w-5 items-center justify-center rounded-full border-[1.5px] border-slate-300 bg-white transition peer-checked:border-orange-500 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-200"
-							>
-								<span class="h-2 w-2 rounded-full border border-orange-500 bg-transparent opacity-0 transition peer-checked:opacity-100"></span>
-							</span>
+							<input type="radio" bind:group={selectedVariantId} value={variant.id} />
 							<span>{variant.name}</span>
 						</div>
 						<strong>{formatCurrency(variant.price)}</strong>

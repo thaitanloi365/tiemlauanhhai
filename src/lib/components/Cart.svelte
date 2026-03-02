@@ -56,32 +56,40 @@
 				<div class="flex-1 space-y-3 overflow-y-auto pb-5">
 					{#each $cartStore as line}
 						<div class="rounded-xl border border-orange-100 p-3">
-							<div class="flex items-start justify-between gap-2">
-								<div>
+							<div class="flex items-start justify-between gap-3">
+								<div class="min-w-0">
 									<p class="font-medium">{line.itemName}</p>
 									<p class="text-xs text-slate-500">{line.variantName}</p>
 									<p class="text-sm text-orange-700">{formatCurrency(line.price)}</p>
 								</div>
-								<button class="text-sm text-red-600" type="button" onclick={() => cartStore.remove(line.variantId)}>
-									Xóa
-								</button>
-							</div>
-							<div class="mt-2 flex items-center gap-2">
-								<button
-									class="size-9 rounded-lg border border-orange-200"
-									type="button"
-									onclick={() => cartStore.updateQuantity(line.variantId, line.quantity - 1)}
-								>
-									-
-								</button>
-								<span class="w-8 text-center font-semibold">{line.quantity}</span>
-								<button
-									class="size-9 rounded-lg border border-orange-200"
-									type="button"
-									onclick={() => cartStore.updateQuantity(line.variantId, line.quantity + 1)}
-								>
-									+
-								</button>
+								<div class="flex shrink-0 flex-col items-end gap-2">
+									<button
+										class="text-sm text-red-600"
+										type="button"
+										onclick={() => cartStore.remove(line.variantId)}
+									>
+										Xóa
+									</button>
+									<div class="flex items-center gap-2">
+										<button
+											class="size-9 rounded-lg border border-orange-200 disabled:opacity-55"
+											type="button"
+											disabled={line.quantity <= 1}
+											aria-disabled={line.quantity <= 1}
+											onclick={() => cartStore.updateQuantity(line.variantId, line.quantity - 1)}
+										>
+											-
+										</button>
+										<span class="w-8 text-center font-semibold">{line.quantity}</span>
+										<button
+											class="size-9 rounded-lg border border-orange-200"
+											type="button"
+											onclick={() => cartStore.updateQuantity(line.variantId, line.quantity + 1)}
+										>
+											+
+										</button>
+									</div>
+								</div>
 							</div>
 						</div>
 					{/each}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Cart from '$lib/components/Cart.svelte';
@@ -7,7 +8,6 @@
 	import Header from '$lib/components/Header.svelte';
 	import MenuFilter from '$lib/components/MenuFilter.svelte';
 	import MenuItemCard from '$lib/components/MenuItem.svelte';
-	import { cartStore } from '$lib/stores/cart';
 	import type { MenuItem } from '$lib/types';
 
 	let { data } = $props();
@@ -15,20 +15,7 @@
 	const canonicalUrl = $derived(`${page.url.origin}/menu`);
 
 	function quickAdd(item: MenuItem) {
-		const firstVariant = item.variants[0];
-		if (!firstVariant) return;
-
-		cartStore.add({
-			variantId: firstVariant.id,
-			itemId: item.id,
-			itemName: item.name,
-			itemSlug: item.slug,
-			variantName: firstVariant.name,
-			itemNote: item.note,
-			price: firstVariant.price,
-			thumbnailUrl: item.thumbnail_url
-		});
-		cartOpen = true;
+		void goto(`/menu/${encodeURIComponent(item.slug)}?quickAdd=1`);
 	}
 </script>
 

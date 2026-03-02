@@ -50,6 +50,30 @@ export const adminLoginSchema = z.object({
 	password: z.string().min(8).max(200)
 });
 
+export const employeeRoleSchema = z.enum(['super_admin', 'manager']);
+
+export const employeeSchema = z.object({
+	email: z.string().trim().email('Email không hợp lệ'),
+	password: z.string().min(8, 'Mật khẩu cần ít nhất 8 ký tự').max(200),
+	role: employeeRoleSchema,
+	displayName: z.string().trim().max(120).optional().nullable()
+});
+
+export const employeeUpdateSchema = z.object({
+	role: employeeRoleSchema,
+	displayName: z.string().trim().max(120).optional().nullable()
+});
+
+export const changePasswordSchema = z
+	.object({
+		currentPassword: z.string().min(8, 'Mật khẩu hiện tại không hợp lệ').max(200),
+		newPassword: z.string().min(8, 'Mật khẩu mới cần ít nhất 8 ký tự').max(200)
+	})
+	.refine((payload) => payload.currentPassword !== payload.newPassword, {
+		message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
+		path: ['newPassword']
+	});
+
 export const subscriberSchema = z.object({
 	email: z.string().trim().email('Email không hợp lệ'),
 	province: z.string().trim().min(1, 'Vui lòng chọn Tỉnh/Thành'),

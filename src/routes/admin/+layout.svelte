@@ -11,7 +11,12 @@
 {#if isLoginPage}
 	{@render children()}
 {:else}
-	<AdminSidebar adminEmail={data.adminUser?.email ?? 'Admin'} open={sidebarOpen} onClose={() => (sidebarOpen = false)} />
+	<AdminSidebar
+		adminEmail={data.adminUser?.email ?? 'Admin'}
+		adminRole={data.adminUser?.role}
+		open={sidebarOpen}
+		onClose={() => (sidebarOpen = false)}
+	/>
 
 	<div class="lg:pl-64">
 		<header class="sticky top-0 z-30 border-b border-orange-200 bg-orange-50/95 backdrop-blur">

@@ -20,7 +20,7 @@ const SCHEDULED_SLOTS = {
 } as const;
 
 function toVietnamClock(now: Date) {
-	return new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60 * 1000);
+	return new Date(now.getTime() + 7 * 60 * 60 * 1000);
 }
 
 function getCutoffHour(vnDate: Date) {
@@ -28,34 +28,41 @@ function getCutoffHour(vnDate: Date) {
 	return dayOfWeek === 0 || dayOfWeek === 6 ? 16 : 14;
 }
 
+function parseVietnamDateString(value: string) {
+	const [yearText, monthText, dayText] = value.split('-');
+	const year = Number(yearText);
+	const month = Number(monthText);
+	const day = Number(dayText);
+	if (!year || !month || !day) return null;
+	const parsed = new Date(Date.UTC(year, month - 1, day));
+	if (
+		parsed.getUTCFullYear() !== year ||
+		parsed.getUTCMonth() !== month - 1 ||
+		parsed.getUTCDate() !== day
+	) {
+		return null;
+	}
+	return parsed;
+}
+
 function validateScheduledDateSlot(
 	scheduledDate: string,
 	scheduledSlot: keyof typeof SCHEDULED_SLOTS,
 	now: Date = new Date()
 ): { ok: true; scheduledFor: string } | { ok: false; message: string } {
-	const [yearText, monthText, dayText] = scheduledDate.split('-');
-	const year = Number(yearText);
-	const month = Number(monthText);
-	const day = Number(dayText);
-	if (!year || !month || !day) {
+	const parsedDate = parseVietnamDateString(scheduledDate);
+	if (!parsedDate) {
 		return { ok: false, message: 'Ngày nhận món không hợp lệ.' };
 	}
-
-	const targetDate = new Date(Date.UTC(year, month - 1, day));
-	if (
-		targetDate.getUTCFullYear() !== year ||
-		targetDate.getUTCMonth() !== month - 1 ||
-		targetDate.getUTCDate() !== day
-	) {
-		return { ok: false, message: 'Ngày nhận món không hợp lệ.' };
-	}
+	const year = parsedDate.getUTCFullYear();
+	const month = parsedDate.getUTCMonth() + 1;
+	const day = parsedDate.getUTCDate();
 
 	const vnNow = toVietnamClock(now);
 	const todayInVietnam = Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate());
 	const targetInVietnam = Date.UTC(year, month - 1, day);
 	const diffDays = Math.round((targetInVietnam - todayInVietnam) / DAY_MS);
-	const targetInVnClock = new Date(`${scheduledDate}T00:00:00+07:00`);
-	const cutoffHour = getCutoffHour(targetInVnClock);
+	const cutoffHour = getCutoffHour(parsedDate);
 	const slot = SCHEDULED_SLOTS[scheduledSlot];
 
 	if (!slot) {
@@ -70,6 +77,8 @@ function validateScheduledDateSlot(
 	}
 	if (diffDays === 0) {
 		const currentHour = vnNow.getUTCHours();
+		const currentMinuteOfDay = currentHour * 60 + vnNow.getUTCMinutes();
+		const slotStartMinute = slot.startHour * 60;
 		if (currentHour >= cutoffHour) {
 			const cutoffLabel = cutoffHour === 16 ? '16:00' : '14:00';
 			return { ok: false, message: `Sau ${cutoffLabel}, nhà hàng không nhận đơn cho hôm nay.` };
@@ -78,7 +87,7 @@ function validateScheduledDateSlot(
 			const cutoffLabel = cutoffHour === 16 ? '16:00' : '14:00';
 			return { ok: false, message: `Khung giờ đã vượt giới hạn nhận đơn hôm nay (${cutoffLabel}).` };
 		}
-		if (slot.endHour <= currentHour) {
+		if (slotStartMinute < currentMinuteOfDay) {
 			return { ok: false, message: 'Khung giờ nhận món đã qua. Vui lòng chọn khung giờ khác.' };
 		}
 	}

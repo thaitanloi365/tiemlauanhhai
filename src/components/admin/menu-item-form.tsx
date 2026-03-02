@@ -1,6 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { formatCurrencyInput, parseCurrencyInput } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -52,8 +55,6 @@ type MenuItemInput = {
   media?: { type: 'image' | 'video'; url: string; alt_text?: string | null }[];
 };
 
-type VariantForm = { name: string; price: string };
-
 type Props = {
   open: boolean;
   categories: CategoryOption[];
@@ -65,6 +66,51 @@ type Props = {
 const EMPTY_VARIANT = { name: '', price: '' };
 const DEFAULT_MENU_IMAGE = '/logo.png';
 
+const variantFormSchema = z.object({
+  name: z.string().trim().min(1, 'Tên biến thể không được để trống.'),
+  price: z
+    .string()
+    .min(1, 'Giá biến thể không hợp lệ.')
+    .refine((value) => {
+      const parsed = parseCurrencyInput(value);
+      return parsed !== null && parsed >= 0;
+    }, 'Giá biến thể không hợp lệ.'),
+});
+
+const mediaFormSchema = z.object({
+  type: z.enum(['image', 'video']),
+  url: z.string().trim().min(1),
+  altText: z.string().optional().nullable(),
+});
+
+const menuItemFormSchema = z.object({
+  name: z.string().trim().min(1, 'Vui lòng nhập tên món và chọn danh mục.'),
+  categoryId: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập tên món và chọn danh mục.'),
+  description: z.string(),
+  ingredients: z.string(),
+  note: z.string(),
+  preparationTimeMinutes: z
+    .string()
+    .refine(
+      (value) =>
+        value.trim() === '' ||
+        (Number.isFinite(Number(value)) && Number(value) >= 0),
+      'Thời gian chuẩn bị không hợp lệ.',
+    ),
+  thumbnailUrl: z.string(),
+  isTopping: z.boolean(),
+  sortOrder: z
+    .string()
+    .refine((value) => Number.isFinite(Number(value)), 'Thứ tự hiển thị không hợp lệ.'),
+  variants: z.array(variantFormSchema).min(1, 'Cần ít nhất một biến thể.'),
+  media: z.array(mediaFormSchema),
+});
+
+type MenuItemFormValues = z.infer<typeof menuItemFormSchema>;
+
 export function MenuItemForm({
   open,
   categories,
@@ -73,82 +119,107 @@ export function MenuItemForm({
   onSaved,
 }: Props) {
   const isEdit = Boolean(item?.id);
-  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
-  const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [description, setDescription] = useState('');
-  const [ingredients, setIngredients] = useState('');
-  const [note, setNote] = useState('');
-  const [preparationTimeMinutes, setPreparationTimeMinutes] = useState('');
-  const [thumbnailUrl, setThumbnailUrl] = useState(DEFAULT_MENU_IMAGE);
-  const [isTopping, setIsTopping] = useState(false);
-  const [sortOrder, setSortOrder] = useState('99');
-  const [variants, setVariants] = useState<VariantForm[]>([EMPTY_VARIANT]);
-  const [media, setMedia] = useState<MediaEntry[]>([]);
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    getValues,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<MenuItemFormValues>({
+    resolver: zodResolver(menuItemFormSchema),
+    defaultValues: {
+      name: '',
+      categoryId: '',
+      description: '',
+      ingredients: '',
+      note: '',
+      preparationTimeMinutes: '',
+      thumbnailUrl: DEFAULT_MENU_IMAGE,
+      isTopping: false,
+      sortOrder: '99',
+      variants: [{ ...EMPTY_VARIANT }],
+      media: [],
+    },
+  });
+  const {
+    fields: variantFields,
+    append: appendVariant,
+    remove: removeVariantField,
+    replace: replaceVariants,
+  } = useFieldArray({
+    control,
+    name: 'variants',
+  });
+  const {
+    fields: mediaFields,
+    append: appendMedia,
+    remove: removeMedia,
+  } = useFieldArray({
+    control,
+    name: 'media',
+  });
 
   useEffect(() => {
     if (!open) return;
-    setName(item?.name ?? '');
-    setCategoryId(item?.category_id ?? categories[0]?.id ?? '');
-    setDescription(item?.description ?? '');
-    setIngredients(item?.ingredients ?? '');
-    setNote(item?.note ?? '');
-    setPreparationTimeMinutes(
-      typeof item?.preparation_time_minutes === 'number'
-        ? String(item.preparation_time_minutes)
-        : '',
-    );
-    setThumbnailUrl(item?.thumbnail_url ?? DEFAULT_MENU_IMAGE);
-    setIsTopping(Boolean(item?.is_topping));
-    setSortOrder(String(item?.sort_order ?? 99));
-    setMedia(
-      (item?.media ?? []).map((entry) => ({
-        type: entry.type,
-        url: entry.url,
-        altText: entry.alt_text ?? null,
-      })),
-    );
     const nextVariants = (item?.variants ?? []).map((entry) => ({
       name: entry.name ?? '',
       price: formatCurrencyInput(String(entry.price ?? '')),
     }));
-    setVariants(nextVariants.length > 0 ? nextVariants : [EMPTY_VARIANT]);
-    setMessage('');
-  }, [open, item, categories]);
-
-  const normalizedVariants = useMemo(
-    () =>
-      variants.map((entry) => ({
-        name: entry.name.trim(),
-        price: parseCurrencyInput(entry.price),
+    reset({
+      name: item?.name ?? '',
+      categoryId: item?.category_id ?? categories[0]?.id ?? '',
+      description: item?.description ?? '',
+      ingredients: item?.ingredients ?? '',
+      note: item?.note ?? '',
+      preparationTimeMinutes:
+        typeof item?.preparation_time_minutes === 'number'
+          ? String(item.preparation_time_minutes)
+          : '',
+      thumbnailUrl: item?.thumbnail_url ?? DEFAULT_MENU_IMAGE,
+      isTopping: Boolean(item?.is_topping),
+      sortOrder: String(item?.sort_order ?? 99),
+      variants: nextVariants.length > 0 ? nextVariants : [{ ...EMPTY_VARIANT }],
+      media: (item?.media ?? []).map((entry) => ({
+        type: entry.type,
+        url: entry.url,
+        altText: entry.alt_text ?? null,
       })),
-    [variants],
-  );
+    });
+    setMessage('');
+  }, [open, item, categories, reset]);
 
   function addVariant() {
-    setVariants((prev) => [...prev, EMPTY_VARIANT]);
+    appendVariant({ ...EMPTY_VARIANT });
   }
 
   function removeVariant(index: number) {
-    setVariants((prev) => {
-      const next = prev.filter((_, current) => current !== index);
-      return next.length > 0 ? next : [EMPTY_VARIANT];
-    });
-  }
-
-  function updateVariant(index: number, next: VariantForm) {
-    setVariants((prev) =>
-      prev.map((entry, current) => (current === index ? next : entry)),
-    );
+    if (variantFields.length <= 1) {
+      replaceVariants([{ ...EMPTY_VARIANT }]);
+      return;
+    }
+    removeVariantField(index);
   }
 
   function addUploadedEntries(entries: MediaEntry[]) {
-    setMedia((prev) => [...prev, ...entries]);
+    appendMedia(
+      entries.map((entry) => ({
+        type: entry.type,
+        url: entry.url,
+        altText: entry.altText ?? null,
+      })),
+    );
     const firstImage = entries.find((entry) => entry.type === 'image');
-    if (firstImage && (!thumbnailUrl || thumbnailUrl === DEFAULT_MENU_IMAGE)) {
-      setThumbnailUrl(firstImage.url);
+    const currentThumbnail = getValues('thumbnailUrl');
+    if (
+      firstImage &&
+      (!currentThumbnail || currentThumbnail === DEFAULT_MENU_IMAGE)
+    ) {
+      setValue('thumbnailUrl', firstImage.url, { shouldDirty: true });
     }
   }
 
@@ -175,7 +246,7 @@ export function MenuItemForm({
           setMessage('Không tìm thấy ảnh hợp lệ sau khi upload.');
           return;
         }
-        setThumbnailUrl(firstImage.url);
+        setValue('thumbnailUrl', firstImage.url, { shouldDirty: true });
         return;
       }
       addUploadedEntries(uploaded);
@@ -184,44 +255,30 @@ export function MenuItemForm({
     }
   }
 
-  async function submit() {
-    if (!name.trim() || !categoryId) {
-      setMessage('Vui lòng nhập tên món và chọn danh mục.');
-      return;
-    }
-    if (normalizedVariants.some((entry) => !entry.name)) {
-      setMessage('Tên biến thể không được để trống.');
-      return;
-    }
-    if (
-      normalizedVariants.some(
-        (entry) => entry.price === null || (entry.price ?? -1) < 0,
-      )
-    ) {
-      setMessage('Giá biến thể không hợp lệ.');
-      return;
-    }
-
-    setSaving(true);
+  async function submit(values: MenuItemFormValues) {
     setMessage('');
+    const normalizedVariants = values.variants.map((entry) => ({
+      name: entry.name.trim(),
+      price: parseCurrencyInput(entry.price),
+    }));
     const payload = {
-      name: name.trim(),
-      categoryId,
-      description: description.trim() || null,
-      ingredients: ingredients.trim() || null,
-      note: note.trim() || null,
-      preparationTimeMinutes: preparationTimeMinutes
-        ? Math.max(0, Number(preparationTimeMinutes))
+      name: values.name.trim(),
+      categoryId: values.categoryId,
+      description: values.description.trim() || null,
+      ingredients: values.ingredients.trim() || null,
+      note: values.note.trim() || null,
+      preparationTimeMinutes: values.preparationTimeMinutes
+        ? Math.max(0, Number(values.preparationTimeMinutes))
         : null,
-      thumbnailUrl: thumbnailUrl.trim() || null,
-      isTopping,
-      sortOrder: Number(sortOrder || 0),
+      thumbnailUrl: values.thumbnailUrl.trim() || null,
+      isTopping: values.isTopping,
+      sortOrder: Number(values.sortOrder || 0),
       variants: normalizedVariants.map((entry, index) => ({
         name: entry.name,
         price: Math.round(entry.price ?? 0),
         isDefault: index === 0,
       })),
-      media: media.map((entry) => ({
+      media: values.media.map((entry) => ({
         type: entry.type,
         url: entry.url,
         altText: entry.altText ?? null,
@@ -245,10 +302,11 @@ export function MenuItemForm({
       }
       onSaved?.(result.item);
       onClose();
-    } finally {
-      setSaving(false);
+    } catch {
+      setMessage('Không lưu được món');
     }
   }
+  const thumbnailUrl = watch('thumbnailUrl');
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -261,74 +319,81 @@ export function MenuItemForm({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <form
+          id="menu-item-form"
+          className="mt-4 grid gap-3 sm:grid-cols-2"
+          onSubmit={handleSubmit(submit)}
+          noValidate
+        >
           <div className="grid gap-1 sm:col-span-2">
             <Label>Tên món</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input {...register('name')} />
+            {errors.name?.message ? (
+              <p className="text-xs text-destructive">{errors.name.message}</p>
+            ) : null}
           </div>
           <div className="grid gap-1">
             <Label>Danh mục</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="categoryId"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.categoryId?.message ? (
+              <p className="text-xs text-destructive">{errors.categoryId.message}</p>
+            ) : null}
           </div>
           <div className="grid gap-1">
             <Label>Thứ tự hiển thị</Label>
-            <Input
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-            />
+            <Input type="number" {...register('sortOrder')} />
+            {errors.sortOrder?.message ? (
+              <p className="text-xs text-destructive">{errors.sortOrder.message}</p>
+            ) : null}
           </div>
           <div className="grid gap-1 sm:col-span-2">
             <Label>Mô tả</Label>
-            <Textarea
-              className="min-h-20"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+            <Textarea className="min-h-20" {...register('description')} />
           </div>
           <div className="grid gap-1 sm:col-span-2">
             <Label>Nguyên liệu</Label>
-            <Textarea
-              className="min-h-20"
-              value={ingredients}
-              onChange={(e) => setIngredients(e.target.value)}
-            />
+            <Textarea className="min-h-20" {...register('ingredients')} />
           </div>
           <div className="grid gap-1 sm:col-span-2">
             <Label>Note nhà hàng</Label>
-            <Textarea
-              className="min-h-16"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
+            <Textarea className="min-h-16" {...register('note')} />
           </div>
           <div className="grid gap-1">
             <Label>Thời gian chuẩn bị (phút)</Label>
-            <Input
-              type="number"
-              value={preparationTimeMinutes}
-              onChange={(e) => setPreparationTimeMinutes(e.target.value)}
-            />
+            <Input type="number" {...register('preparationTimeMinutes')} />
+            {errors.preparationTimeMinutes?.message ? (
+              <p className="text-xs text-destructive">
+                {errors.preparationTimeMinutes.message}
+              </p>
+            ) : null}
           </div>
           <div className="grid gap-2 sm:col-span-2">
             <Label>Thumbnail</Label>
             <div className="flex flex-wrap items-center gap-3 rounded-md border p-3">
-              <img
-                src={thumbnailUrl || DEFAULT_MENU_IMAGE}
-                alt="Thumbnail preview"
-                className="h-20 w-20 rounded-md object-cover"
-              />
+              <div className="aspect-video w-36 overflow-hidden rounded-md">
+                <img
+                  src={thumbnailUrl || DEFAULT_MENU_IMAGE}
+                  alt="Thumbnail preview"
+                  className="h-full w-full object-cover"
+                />
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Button asChild type="button" variant="outline">
                   <Label className="cursor-pointer">
@@ -345,7 +410,11 @@ export function MenuItemForm({
                 </Button>
                 <Button
                   type="button"
-                  onClick={() => setThumbnailUrl(DEFAULT_MENU_IMAGE)}
+                  onClick={() =>
+                    setValue('thumbnailUrl', DEFAULT_MENU_IMAGE, {
+                      shouldDirty: true,
+                    })
+                  }
                   variant="outline"
                 >
                   Dùng ảnh mặc định
@@ -354,13 +423,19 @@ export function MenuItemForm({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Checkbox
-              checked={isTopping}
-              onCheckedChange={(value) => setIsTopping(value === true)}
+            <Controller
+              control={control}
+              name="isTopping"
+              render={({ field }) => (
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={(value) => field.onChange(value === true)}
+                />
+              )}
             />
             <Label>Là topping</Label>
           </div>
-        </div>
+        </form>
 
         <section className="mt-5 rounded-md border p-3">
           <div className="flex items-center justify-between gap-2">
@@ -375,30 +450,40 @@ export function MenuItemForm({
             </Button>
           </div>
           <div className="mt-3 space-y-2">
-            {variants.map((variant, index) => (
+            {variantFields.map((variant, index) => (
               <div
-                key={`${index}-${variant.name}`}
+                key={variant.id}
                 className="rounded-md border p-3"
               >
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Input
                     placeholder="Tên biến thể"
-                    value={variant.name}
-                    onChange={(e) =>
-                      updateVariant(index, { ...variant, name: e.target.value })
-                    }
+                    {...register(`variants.${index}.name`)}
                   />
-                  <Input
-                    placeholder="Giá (VND)"
-                    value={variant.price}
-                    onChange={(e) =>
-                      updateVariant(index, {
-                        ...variant,
-                        price: formatCurrencyInput(e.target.value),
-                      })
-                    }
+                  <Controller
+                    control={control}
+                    name={`variants.${index}.price`}
+                    render={({ field }) => (
+                      <Input
+                        placeholder="Giá (VND)"
+                        value={field.value}
+                        onChange={(e) =>
+                          field.onChange(formatCurrencyInput(e.target.value))
+                        }
+                      />
+                    )}
                   />
                 </div>
+                {errors.variants?.[index]?.name?.message ? (
+                  <p className="mt-2 text-xs text-destructive">
+                    {errors.variants[index]?.name?.message}
+                  </p>
+                ) : null}
+                {errors.variants?.[index]?.price?.message ? (
+                  <p className="mt-1 text-xs text-destructive">
+                    {errors.variants[index]?.price?.message}
+                  </p>
+                ) : null}
                 <div className="mt-2 text-right">
                   <Button
                     type="button"
@@ -433,7 +518,7 @@ export function MenuItemForm({
             </Button>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {media.map((entry, index) => (
+            {mediaFields.map((entry, index) => (
               <div
                 key={`${entry.url}-${index}`}
                 className="rounded-md border p-2"
@@ -442,14 +527,14 @@ export function MenuItemForm({
                   <img
                     src={entry.url}
                     alt=""
-                    className="h-28 w-full rounded-md object-cover"
+                    className="aspect-video w-full rounded-md object-cover"
                   />
                 ) : (
                   <a
                     href={entry.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex h-28 items-center justify-center rounded-md bg-muted text-sm text-muted-foreground"
+                    className="flex aspect-video w-full items-center justify-center rounded-md bg-muted text-sm text-muted-foreground"
                   >
                     Video media
                   </a>
@@ -457,7 +542,11 @@ export function MenuItemForm({
                 <div className="mt-2 flex gap-2">
                   <Button
                     type="button"
-                    onClick={() => setThumbnailUrl(entry.url)}
+                    onClick={() =>
+                      setValue('thumbnailUrl', entry.url, {
+                        shouldDirty: true,
+                      })
+                    }
                     variant="outline"
                     size="sm"
                   >
@@ -465,11 +554,7 @@ export function MenuItemForm({
                   </Button>
                   <Button
                     type="button"
-                    onClick={() =>
-                      setMedia((prev) =>
-                        prev.filter((_, current) => current !== index),
-                      )
-                    }
+                    onClick={() => removeMedia(index)}
                     variant="destructive"
                     size="sm"
                   >
@@ -491,8 +576,12 @@ export function MenuItemForm({
           <Button type="button" onClick={onClose} variant="outline">
             Hủy
           </Button>
-          <Button type="button" onClick={submit} disabled={saving || uploading}>
-            {saving ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Tạo món'}
+          <Button
+            type="submit"
+            form="menu-item-form"
+            disabled={isSubmitting || uploading}
+          >
+            {isSubmitting ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Tạo món'}
           </Button>
         </DialogFooter>
       </DialogContent>

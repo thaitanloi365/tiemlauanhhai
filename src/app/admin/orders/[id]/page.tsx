@@ -3,7 +3,11 @@
 import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { formatCurrency, statusLabel } from '@/lib/utils/format';
+import { adminOrderUpdateSchema } from '@/lib/utils/validation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +54,19 @@ const STATUS_OPTIONS = [
   'cancelled',
 ] as const;
 
+const adminOrderUpdateFormSchema = adminOrderUpdateSchema.extend({
+  trackingId: z.string().max(120),
+  trackingUrl: z
+    .string()
+    .refine(
+      (value) => value.trim() === '' || /^https?:\/\/.+/i.test(value.trim()),
+      'Tracking URL không hợp lệ',
+    )
+    .refine((value) => value.length <= 500, 'Tracking URL không hợp lệ'),
+});
+
+type AdminOrderUpdateFormValues = z.infer<typeof adminOrderUpdateFormSchema>;
+
 function formatScheduledFor(value: string | null | undefined) {
   if (!value) return null;
   const start = new Date(value);
@@ -80,7 +97,20 @@ export default function AdminOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [message, setMessage] = useState('');
-  const [saving, setSaving] = useState(false);
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<AdminOrderUpdateFormValues>({
+    resolver: zodResolver(adminOrderUpdateFormSchema),
+    defaultValues: {
+      status: 'pending',
+      trackingId: '',
+      trackingUrl: '',
+    },
+  });
 
   const detailQuery = useQuery({
     queryKey: ['admin', 'order-detail', params.id],
@@ -96,27 +126,25 @@ export default function AdminOrderDetailPage() {
   });
 
   const order = detailQuery.data?.order;
-  const [status, setStatus] = useState(order?.status ?? 'pending');
-  const [trackingId, setTrackingId] = useState(order?.tracking_id ?? '');
-  const [trackingUrl, setTrackingUrl] = useState(order?.tracking_url ?? '');
 
   useEffect(() => {
     if (!order) return;
-    setStatus(order.status);
-    setTrackingId(order.tracking_id ?? '');
-    setTrackingUrl(order.tracking_url ?? '');
-  }, [order?.id, order?.status, order?.tracking_id, order?.tracking_url]);
+    reset({
+      status: order.status as AdminOrderUpdateFormValues['status'],
+      trackingId: order.tracking_id ?? '',
+      trackingUrl: order.tracking_url ?? '',
+    });
+  }, [order, reset]);
 
-  async function save() {
-    setSaving(true);
+  async function save(values: AdminOrderUpdateFormValues) {
     try {
       const res = await fetch(`/api/admin/orders/${params.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          status,
-          trackingId: trackingId || null,
-          trackingUrl: trackingUrl || null,
+          status: values.status,
+          trackingId: values.trackingId.trim() || null,
+          trackingUrl: values.trackingUrl.trim() || null,
         }),
       });
       const data = await res.json();
@@ -130,8 +158,8 @@ export default function AdminOrderDetailPage() {
           queryKey: ['admin', 'order-detail', params.id],
         });
       }
-    } finally {
-      setSaving(false);
+    } catch {
+      setMessage('Không thể cập nhật');
     }
   }
 
@@ -198,45 +226,53 @@ export default function AdminOrderDetailPage() {
                 </p>
               </div>
             ) : null}
-            <div className="mt-4 space-y-2">
+            <form className="mt-4 space-y-2" onSubmit={handleSubmit(save)} noValidate>
               <div className="grid gap-1 text-sm">
                 <Label>Trạng thái</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {statusLabel(option)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {statusLabel(option)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.status?.message ? (
+                  <p className="text-xs text-destructive">{errors.status.message}</p>
+                ) : null}
               </div>
               <div className="grid gap-1 text-sm">
                 <Label>Tracking ID</Label>
-                <Input
-                  value={trackingId}
-                  onChange={(e) => setTrackingId(e.target.value)}
-                />
+                <Input {...register('trackingId')} />
+                {errors.trackingId?.message ? (
+                  <p className="text-xs text-destructive">
+                    {errors.trackingId.message}
+                  </p>
+                ) : null}
               </div>
               <div className="grid gap-1 text-sm">
                 <Label>Tracking URL</Label>
-                <Input
-                  value={trackingUrl}
-                  onChange={(e) => setTrackingUrl(e.target.value)}
-                />
+                <Input {...register('trackingUrl')} />
+                {errors.trackingUrl?.message ? (
+                  <p className="text-xs text-destructive">
+                    {errors.trackingUrl.message}
+                  </p>
+                ) : null}
               </div>
-            </div>
-            <Button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="mt-4"
-            >
-              {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-            </Button>
+              <Button type="submit" disabled={isSubmitting} className="mt-4">
+                {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </Button>
+            </form>
             {message ? (
               <p className="mt-2 text-sm text-muted-foreground">{message}</p>
             ) : null}

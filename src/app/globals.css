@@ -250,3 +250,62 @@
 .app-overlay {
   @apply fixed inset-0 z-50 bg-black/55 backdrop-blur-sm;
 }
+
+@keyframes page-turn-settle-left {
+  0% {
+    opacity: 0;
+    transform: perspective(800px) rotateY(70deg);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(800px) rotateY(0deg);
+  }
+}
+
+@keyframes page-turn-settle-right {
+  0% {
+    opacity: 0;
+    transform: perspective(800px) rotateY(-70deg);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(800px) rotateY(0deg);
+  }
+}
+
+@keyframes page-fade {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-book-next > :first-child {
+  animation: page-turn-settle-left 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-origin: right center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.animate-book-next > :last-child {
+  animation: page-fade 300ms ease-out;
+}
+
+.animate-book-prev > :first-child {
+  animation: page-fade 300ms ease-out;
+}
+
+.animate-book-prev > :last-child {
+  animation: page-turn-settle-right 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}

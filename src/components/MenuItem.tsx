@@ -32,14 +32,19 @@ export function MenuItem({ item }: Props) {
   };
 
   return (
-    <div className="card-surface flex h-full flex-col overflow-hidden">
-      <Link href={`/menu/${item.slug}`} className="block">
+    <div className="card-surface relative flex h-full flex-col overflow-hidden">
+      <Link
+        href={`/menu/${item.slug}`}
+        aria-label={`Xem chi tiet ${item.name}`}
+        className="absolute inset-0 z-10"
+      />
+      <div className="aspect-video w-full overflow-hidden">
         <img
           src={item.thumbnail_url || '/logo.png'}
           alt={item.name}
-          className="h-36 w-full object-cover"
+          className="h-full w-full object-cover"
         />
-      </Link>
+      </div>
       <div className="flex flex-1 flex-col px-3 py-2">
         <h3 className="text-base font-semibold">{item.name}</h3>
         <p className="text-sm text-muted-foreground">
@@ -51,7 +56,7 @@ export function MenuItem({ item }: Props) {
               ? formatCurrency(minPrice)
               : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`}
           </p>
-          <div className="mt-2 flex gap-2">
+          <div className="relative z-20 mt-2 flex gap-2">
             <Button asChild variant="outline" className="flex-1">
               <Link href={`/menu/${item.slug}`} className="text-center">
                 Chi tiết

@@ -5,12 +5,17 @@ import { useCartStore, selectCartTotal } from '@/lib/stores/cart';
 import { formatCurrency } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 
-export function Cart() {
+type Props = {
+  compact?: boolean;
+};
+
+export function Cart({ compact = false }: Props) {
   const lines = useCartStore((state) => state.lines);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const remove = useCartStore((state) => state.remove);
   const clear = useCartStore((state) => state.clear);
   const total = useCartStore(selectCartTotal);
+  const sortedLines = [...lines].sort((a, b) => b.price - a.price);
 
   if (lines.length === 0) {
     return (
@@ -22,7 +27,7 @@ export function Cart() {
 
   return (
     <div className="space-y-3">
-      {lines.map((line) => (
+      {sortedLines.map((line) => (
         <div
           key={line.variantId}
           className="rounded-xl border border-border p-3"
@@ -77,27 +82,29 @@ export function Cart() {
           </div>
         </div>
       ))}
-      <div className="rounded-xl border border-border p-3">
-        <p className="flex items-center justify-between">
-          <span>Tạm tính</span>
-          <strong>{formatCurrency(total)}</strong>
-        </p>
-        <div className="mt-3 flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="flex-1"
-            onClick={clear}
-          >
-            Xóa tất cả
-          </Button>
-          <Button asChild className="flex-1">
-            <Link href="/menu" className="text-center">
-              Xem thêm món
-            </Link>
-          </Button>
+      {compact ? null : (
+        <div className="rounded-xl border border-border p-3">
+          <p className="flex items-center justify-between">
+            <span>Tạm tính</span>
+            <strong>{formatCurrency(total)}</strong>
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={clear}
+            >
+              Xóa tất cả
+            </Button>
+            <Button asChild className="flex-1">
+              <Link href="/menu" className="text-center">
+                Xem thêm món
+              </Link>
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

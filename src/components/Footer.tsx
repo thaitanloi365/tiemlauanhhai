@@ -38,7 +38,7 @@ export function Footer() {
                 rel="noreferrer"
                 aria-label="Facebook"
               >
-                <Facebook />
+                <Facebook className="text-primary" />
               </a>
             </Button>
             <Button asChild variant="ghost" size="icon">
@@ -48,7 +48,7 @@ export function Footer() {
                 rel="noreferrer"
                 aria-label="Zalo"
               >
-                <MessageCircleMore />
+                <MessageCircleMore className="text-primary" />
               </a>
             </Button>
             <Button asChild variant="ghost" size="icon">
@@ -58,7 +58,7 @@ export function Footer() {
                 rel="noreferrer"
                 aria-label="TikTok"
               >
-                <Music2 />
+                <Music2 className="text-primary" />
               </a>
             </Button>
           </div>

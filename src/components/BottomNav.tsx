@@ -2,11 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCartStore, selectCartCount } from '@/lib/stores/cart';
+import { CartDrawer } from '@/components/CartDrawer';
 
 export function BottomNav() {
   const pathname = usePathname();
-  const count = useCartStore(selectCartCount);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 md:hidden">
@@ -23,17 +22,22 @@ export function BottomNav() {
         >
           Menu
         </Link>
-        <Link
-          href="/cart"
-          className={`relative text-sm font-medium ${pathname === '/cart' ? 'text-primary' : 'text-muted-foreground'}`}
-        >
-          Giỏ hàng
-          {count > 0 ? (
-            <span className="notification-badge-sm absolute -right-5 -top-3">
-              {count}
-            </span>
-          ) : null}
-        </Link>
+        <CartDrawer>
+          {({ count, openDrawer }) => (
+            <button
+              type="button"
+              className={`relative text-sm font-medium ${pathname === '/cart' ? 'text-primary' : 'text-muted-foreground'}`}
+              onClick={openDrawer}
+            >
+              Giỏ hàng
+              {count > 0 ? (
+                <span className="notification-badge-sm absolute -right-5 -top-3">
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          )}
+        </CartDrawer>
         <Link
           href="/orders"
           className={`text-sm font-medium ${pathname.startsWith('/orders') ? 'text-primary' : 'text-muted-foreground'}`}

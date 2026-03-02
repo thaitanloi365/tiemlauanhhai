@@ -13,7 +13,7 @@ type PageProps = {
 
 export default async function MenuDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const { item, relatedItems } = await getMenuItemBySlug(slug);
+  const { item, relatedItems, toppings, drinks } = await getMenuItemBySlug(slug);
   if (!item) return notFound();
 
   return (
@@ -26,6 +26,26 @@ export default async function MenuDetailPage({ params }: PageProps) {
         <div className="mt-4">
           <MenuDetail item={item} />
         </div>
+        {toppings.length > 0 ? (
+          <section className="mt-10">
+            <h2 className="mb-4 text-xl font-semibold">Gọi thêm</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {toppings.map((entry) => (
+                <MenuItem key={entry.id} item={entry} />
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {drinks.length > 0 ? (
+          <section className="mt-10">
+            <h2 className="mb-4 text-xl font-semibold">Đồ uống</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {drinks.map((entry) => (
+                <MenuItem key={entry.id} item={entry} />
+              ))}
+            </div>
+          </section>
+        ) : null}
         {relatedItems.length > 0 ? (
           <section className="mt-10">
             <h2 className="mb-4 text-xl font-semibold">Món liên quan</h2>

@@ -227,11 +227,13 @@ export default function AdminMenuPage() {
                 className="rounded-xl border border-border bg-muted/30 p-3"
               >
                 <div className="flex gap-3">
-                  <img
-                    src={item.thumbnail_url || DEFAULT_MENU_IMAGE}
-                    alt={item.name}
-                    className="h-20 w-20 rounded-lg object-cover"
-                  />
+                  <div className="aspect-video w-32 shrink-0 overflow-hidden rounded-lg">
+                    <img
+                      src={item.thumbnail_url || DEFAULT_MENU_IMAGE}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{item.name}</p>
                     <p className="truncate text-xs text-muted-foreground">

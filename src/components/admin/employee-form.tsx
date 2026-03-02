@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import {
-  isStrongPassword,
-  strongPasswordGuideline,
-} from '@/lib/utils/password-policy';
+  employeeSchema,
+  employeeUpdateSchema,
+} from '@/lib/utils/validation';
+import { strongPasswordGuideline } from '@/lib/utils/password-policy';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,6 +27,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
+const employeeCreateFormSchema = employeeSchema.extend({
+  mode: z.literal('create'),
+});
+
+const employeeEditFormSchema = employeeUpdateSchema.extend({
+  mode: z.literal('edit'),
+  email: z.string().optional(),
+  password: z.string().optional(),
+});
+
+const employeeFormSchema = z.discriminatedUnion('mode', [
+  employeeCreateFormSchema,
+  employeeEditFormSchema,
+]);
+
+type EmployeeFormValues = z.infer<typeof employeeFormSchema>;
 
 type Employee = {
   id: string;
@@ -53,40 +74,53 @@ export function EmployeeForm({
   onClose,
   onSaved,
 }: Props) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'super_admin' | 'manager'>('manager');
-  const [displayName, setDisplayName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    clearErrors,
+    formState: { errors, isSubmitting },
+  } = useForm<EmployeeFormValues>({
+    resolver: zodResolver(employeeFormSchema),
+    defaultValues: {
+      mode: 'create',
+      email: '',
+      password: '',
+      role: 'manager',
+      displayName: '',
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
-    setEmail(employee?.email ?? '');
-    setPassword('');
-    setRole(employee?.role ?? roleOptions[0]?.value ?? 'manager');
-    setDisplayName(employee?.display_name ?? '');
-    setMessage('');
-  }, [open, employee, roleOptions]);
+    reset({
+      mode,
+      email: employee?.email ?? '',
+      password: '',
+      role: employee?.role ?? roleOptions[0]?.value ?? 'manager',
+      displayName: employee?.display_name ?? '',
+    });
+  }, [open, employee, roleOptions, mode, reset]);
 
-  async function save() {
-    if (mode === 'create' && !isStrongPassword(password)) {
-      setMessage(strongPasswordGuideline);
-      return;
-    }
-
-    setSaving(true);
-    setMessage('');
+  async function save(values: EmployeeFormValues) {
+    clearErrors('root');
 
     const payload =
-      mode === 'create'
-        ? { email, password, role, displayName: displayName || null }
-        : { role, displayName: displayName || null };
+      values.mode === 'create'
+        ? {
+            email: values.email,
+            password: values.password,
+            role: values.role,
+            displayName: values.displayName || null,
+          }
+        : { role: values.role, displayName: values.displayName || null };
     const endpoint =
-      mode === 'create'
+      values.mode === 'create'
         ? '/api/admin/employees'
         : `/api/admin/employees/${employee?.id}`;
-    const method = mode === 'create' ? 'POST' : 'PATCH';
+    const method = values.mode === 'create' ? 'POST' : 'PATCH';
 
     try {
       const res = await fetch(endpoint, {
@@ -96,13 +130,19 @@ export function EmployeeForm({
       });
       const data = await res.json();
       if (!res.ok) {
-        setMessage(data.message ?? 'Không thể lưu nhân viên');
+        setError('root', {
+          type: 'server',
+          message: data.message ?? 'Không thể lưu nhân viên',
+        });
         return;
       }
       onSaved?.();
       onClose();
-    } finally {
-      setSaving(false);
+    } catch {
+      setError('root', {
+        type: 'server',
+        message: 'Không thể lưu nhân viên',
+      });
     }
   }
 
@@ -120,17 +160,25 @@ export function EmployeeForm({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4 grid gap-3">
+        <form
+          id="employee-form"
+          className="mt-4 grid gap-3"
+          onSubmit={handleSubmit(save)}
+          noValidate
+        >
+          <input type="hidden" {...register('mode')} />
           <div className="grid gap-1">
             <Label>Email</Label>
             <Input
               type="email"
-              value={email}
               disabled={mode === 'edit'}
-              onChange={(e) => setEmail(e.target.value)}
               placeholder="employee@example.com"
               className="disabled:bg-muted"
+              {...register('email')}
             />
+            {errors.email?.message ? (
+              <p className="text-xs text-destructive">{errors.email.message}</p>
+            ) : null}
           </div>
 
           {mode === 'create' ? (
@@ -138,13 +186,15 @@ export function EmployeeForm({
               <Label>Mật khẩu</Label>
               <Input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Tối thiểu 8 ký tự"
+                {...register('password')}
               />
               <span className="text-xs text-muted-foreground">
                 {strongPasswordGuideline}
               </span>
+              {errors.password?.message ? (
+                <p className="text-xs text-destructive">{errors.password.message}</p>
+              ) : null}
             </div>
           ) : null}
 
@@ -152,53 +202,60 @@ export function EmployeeForm({
             <Label>Tên hiển thị</Label>
             <Input
               type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Ví dụ: Quản lý ca sáng"
+              {...register('displayName')}
             />
+            {errors.displayName?.message ? (
+              <p className="text-xs text-destructive">
+                {errors.displayName.message}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-1">
             <Label>Vai trò</Label>
-            <Select
-              value={role}
-              onValueChange={(value) =>
-                setRole(value as 'super_admin' | 'manager')
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {roleOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="role"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.role?.message ? (
+              <p className="text-xs text-destructive">{errors.role.message}</p>
+            ) : null}
           </div>
-        </div>
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Hủy
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Đang lưu...' : 'Lưu'}
+            </Button>
+          </DialogFooter>
+        </form>
 
-        {message ? (
+        {errors.root?.message ? (
           <p className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-foreground">
-            {message}
+            {errors.root.message}
           </p>
         ) : null}
-
-        <DialogFooter className="mt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={saving}
-          >
-            Hủy
-          </Button>
-          <Button type="button" onClick={save} disabled={saving}>
-            {saving ? 'Đang lưu...' : 'Lưu'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

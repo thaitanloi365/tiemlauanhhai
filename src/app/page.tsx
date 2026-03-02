@@ -8,15 +8,20 @@ import { BottomNav } from '@/components/BottomNav';
 import { FloatingContact } from '@/components/FloatingContact';
 
 export default async function HomePage() {
-  const { menuItems } = await getMenuData();
-  const featured = menuItems.slice(0, 6);
+  const { categories, menuItems } = await getMenuData();
+  const categoryById = new Map(categories.map((category) => [category.id, category.slug]));
+  const featuredMainDishes = menuItems.filter((item) => {
+    const slug = categoryById.get(item.category_id);
+    return slug === 'lau' || slug === 'mon-chinh';
+  });
+  const featured = (featuredMainDishes.length > 0 ? featuredMainDishes : menuItems).slice(0, 6);
 
   return (
     <>
       <Header />
       <main className="container-shell py-8 md:py-12">
-        <section className="grid gap-6 md:grid-cols-2 md:items-center">
-          <div>
+        <section className="grid gap-6 md:grid-cols-8 md:items-center">
+          <div className="md:col-span-3">
             <h1 className="text-4xl font-semibold">Tiệm Lẩu Anh Hai</h1>
             <p className="mt-3 text-muted-foreground">
               Thực đơn lẩu và món ăn kèm cho bữa ăn gia đình tại nhà.
@@ -30,7 +35,9 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
-          <MenuBook />
+          <div className="md:col-span-5">
+            <MenuBook />
+          </div>
         </section>
 
         <section className="mt-10">
@@ -38,7 +45,7 @@ export default async function HomePage() {
             <h2 className="text-2xl font-semibold">Món nổi bật</h2>
             <Link
               href="/menu"
-              className="text-sm font-medium text-primary hover:underline"
+              className="text-sm font-medium text-primary underline"
             >
               Xem tất cả
             </Link>

@@ -16,17 +16,19 @@
 		onkeydown={(event) => event.key === 'Escape' && onClose()}
 	>
 		<section
-			class="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-card p-4"
+			class="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-background p-4"
 			role="dialog"
 			aria-modal="true"
 			tabindex="-1"
 			onclick={(event) => event.stopPropagation()}
 		>
-			<div class="mb-3 flex items-center justify-between">
+			<div class="mb-3 flex items-center justify-between border-b border-orange-100 pb-3">
 				<h2 class="text-lg font-semibold">{title}</h2>
 				<button type="button" class="btn-secondary" onclick={onClose}>Đóng</button>
 			</div>
-			{@render children()}
+			<div class="pt-1">
+				{@render children()}
+			</div>
 		</section>
 	</div>
 {/if}

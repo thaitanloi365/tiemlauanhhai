@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { tick } from 'svelte';
+	import { Popover } from 'bits-ui';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import Header from '$lib/components/Header.svelte';
@@ -120,6 +121,7 @@ function parseVietnamDateString(value: string) {
 
 	let submitting = $state(false);
 	let showConfirm = $state(false);
+	let removeConfirmVariantId = $state<string | null>(null);
 	let errorMessage = $state('');
 	let invalidFields = $state<string[]>([]);
 	const canonicalUrl = $derived(`${page.url.origin}/cart`);
@@ -175,15 +177,20 @@ function parseVietnamDateString(value: string) {
 		scheduledDate: 'scheduledDate',
 		scheduledSlot: 'scheduledSlot'
 	};
+	const focusableTextFields = new Set(['customerName', 'phone', 'address']);
 
 	async function focusFirstInvalidField(field: string) {
 		await tick();
 		const targetName = focusTargetByField[field];
 		if (!targetName) return;
-		const target = document.querySelector<HTMLElement>(`[name="${targetName}"]`);
+		const target = document.querySelector<HTMLElement>(
+			`[name="${targetName}"], [data-field-name="${targetName}"]`
+		);
 		if (!target) return;
 		target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-		target.focus();
+		if (focusableTextFields.has(field) && typeof target.focus === 'function') {
+			target.focus();
+		}
 	}
 
 	async function openConfirm() {
@@ -252,6 +259,11 @@ function parseVietnamDateString(value: string) {
 			submitting = false;
 		}
 	}
+
+	function confirmRemoveLine(variantId: string) {
+		cartStore.remove(variantId);
+		removeConfirmVariantId = null;
+	}
 </script>
 
 <svelte:head>
@@ -297,13 +309,40 @@ function parseVietnamDateString(value: string) {
 								<p class="text-sm text-orange-700">{formatCurrency(line.price)}</p>
 							</div>
 							<div class="flex shrink-0 items-center gap-4">
-								<button
-									class="text-sm leading-none text-red-600"
-									type="button"
-									onclick={() => cartStore.remove(line.variantId)}
+								<Popover.Root
+									open={removeConfirmVariantId === line.variantId}
+									onOpenChange={(nextOpen) =>
+										(removeConfirmVariantId = nextOpen ? line.variantId : null)}
 								>
-									Xóa
-								</button>
+									<Popover.Trigger class="text-sm leading-none text-red-600" type="button">
+										Xóa
+									</Popover.Trigger>
+									<Popover.Portal>
+										<Popover.Content
+											class="bg-popover text-popover-foreground z-50 w-64 space-y-3 rounded-md border p-3 shadow-md outline-hidden"
+											sideOffset={8}
+											align="end"
+										>
+											<p class="text-sm">Xóa món này khỏi giỏ hàng?</p>
+											<div class="flex justify-end gap-2">
+												<button
+													class="rounded-md border px-3 py-1.5 text-sm hover:bg-slate-50"
+													type="button"
+													onclick={() => (removeConfirmVariantId = null)}
+												>
+													Hủy
+												</button>
+												<button
+													class="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700"
+													type="button"
+													onclick={() => confirmRemoveLine(line.variantId)}
+												>
+													Xóa món
+												</button>
+											</div>
+										</Popover.Content>
+									</Popover.Portal>
+								</Popover.Root>
 								<div class="flex items-center gap-2">
 									<button
 										class="size-9 rounded-lg border border-orange-200 disabled:cursor-not-allowed disabled:opacity-55"

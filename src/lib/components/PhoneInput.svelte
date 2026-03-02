@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Input } from '$lib/components/ui/input/index.js';
+
 	let {
 		name = 'phone',
 		value = $bindable(''),
@@ -22,9 +24,17 @@
 	function normalizeVietnamPhoneInput(input: string) {
 		const digitsOnly = input.replace(/\D/g, '');
 		if (!digitsOnly) return '';
-		if (digitsOnly.startsWith('84')) return `0${digitsOnly.slice(2, 11)}`;
-		if (digitsOnly.startsWith('0')) return digitsOnly.slice(0, 10);
-		return digitsOnly.slice(0, 10);
+		if (digitsOnly.startsWith('84')) {
+			return `0${digitsOnly.slice(2, 11)}`;
+		}
+		if (digitsOnly.startsWith('0')) {
+			return digitsOnly.slice(0, 10);
+		}
+		// Accept local numbers without leading 0 and normalize to 0xxxxxxxxx.
+		if (digitsOnly.length <= 9) {
+			return `0${digitsOnly.slice(0, 9)}`;
+		}
+		return `0${digitsOnly.slice(0, 9)}`;
 	}
 
 	function formatVietnamPhone(input: string) {
@@ -52,12 +62,12 @@
 </script>
 
 <div
-	class={`flex w-full items-center rounded-xl border-2 transition focus-within:ring-2 ${
+	class={`flex w-full items-center rounded-xl px-0 py-0 transition ${
 		controlClass
 	} ${invalid ? invalidClass : validClass}`}
 >
 	<span
-		class={`inline-flex min-h-11 items-center gap-1 border-r px-3 py-2 text-sm font-medium text-slate-700 ${
+		class={`inline-flex min-h-9 items-center gap-1 border-r px-3 py-1 text-sm font-medium text-slate-700 ${
 			invalid ? 'border-red-400' : 'border-primary/70'
 		}`}
 		aria-hidden="true"
@@ -65,14 +75,14 @@
 		<span>🇻🇳</span>
 		<span>+84</span>
 	</span>
-	<input
+	<Input
 		{name}
 		value={phoneDisplayValue}
 		oninput={onPhoneInput}
 		type="tel"
 		inputmode="numeric"
 		pattern="[0-9 ]*"
-		class="input-unstyled w-full rounded-r-xl border-0 bg-transparent px-3 py-2 outline-none ring-0 focus:outline-none"
+		class="w-full rounded-r-xl border-0 bg-transparent px-3 py-1 shadow-none focus-visible:border-0 focus-visible:ring-0"
 		{placeholder}
 		required
 	/>

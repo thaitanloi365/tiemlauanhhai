@@ -85,7 +85,7 @@
 		transition:fade={{ duration: 180 }}
 	>
 		<div
-			class="absolute inset-x-0 bottom-0 flex max-h-[85vh] w-full flex-col rounded-t-2xl bg-card p-4 shadow-2xl md:inset-x-auto md:inset-y-0 md:bottom-auto md:right-0 md:max-h-none md:max-w-2xl md:rounded-none"
+			class="absolute inset-x-0 bottom-0 flex max-h-[85vh] w-full flex-col rounded-t-2xl bg-background p-4 shadow-2xl md:inset-x-auto md:inset-y-0 md:bottom-auto md:right-0 md:max-h-none md:max-w-2xl md:rounded-none"
 			role="dialog"
 			aria-modal="true"
 			tabindex="-1"
@@ -96,7 +96,7 @@
 			<div class="mb-2 flex justify-center md:hidden">
 				<div class="h-1.5 w-12 rounded-full bg-slate-300"></div>
 			</div>
-			<div class="mb-4 flex items-center justify-between gap-3">
+			<div class="mb-3 flex items-center justify-between gap-3 border-b border-orange-100 pb-3">
 				<div>
 					<h2 class="text-lg font-semibold">Thực đơn</h2>
 					<p class="text-xs text-slate-500">Chạm thêm món để cập nhật giỏ hàng ngay.</p>

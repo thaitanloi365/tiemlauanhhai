@@ -6,7 +6,12 @@
 	import { PROVINCES_NEW } from '$lib/data/provinces-new';
 	import { HCMC_PROVINCE_CODE, HCMC_PROVINCE_NAME, PROVINCES_OLD } from '$lib/data/provinces-old';
 	import PhoneInput from '$lib/components/PhoneInput.svelte';
+	import SelectSearch from '$lib/components/SelectSearch.svelte';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
+	import { Separator } from '$lib/components/ui/separator/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
 
 	type AddressMode = 'old' | 'new';
 
@@ -39,23 +44,35 @@
 		return invalidFields.includes(field);
 	}
 
-	const formControlBaseClass =
-		'w-full rounded-xl border-2 bg-orange-50/70 px-3 py-2 transition focus:outline-none';
-	const formControlValidClass =
-		'border-primary/70 focus:border-primary focus:ring-2 focus:ring-primary/20';
+	const formControlBaseClass = 'w-full rounded-xl border bg-orange-50/70 transition';
+	const selectControlBaseClass = 'w-full rounded-xl border bg-orange-50/70';
+	const phoneControlBaseClass =
+		'w-full rounded-xl border bg-orange-50/70 px-0 py-0 transition focus:outline-none';
+	const formControlValidClass = 'border-primary/70 focus:border-primary';
 	const formControlInvalidClass =
-		'border-red-400 ring-2 ring-red-200 focus:border-red-500 focus:ring-red-200';
+		'border-red-400 focus:border-red-500';
+	const radioOptionClass =
+		'inline-flex items-center gap-2 rounded-xl border bg-orange-50/70 px-3 py-2 border-primary/70';
 
 	function controlClass(field: string) {
 		return `${formControlBaseClass} ${isInvalid(field) ? formControlInvalidClass : formControlValidClass}`;
 	}
+
+	function selectControlClass(field: string) {
+		return `${selectControlBaseClass} ${isInvalid(field) ? formControlInvalidClass : formControlValidClass}`;
+	}
+
+function resetProvinceToHcm() {
+	selectedProvinceCode = HCMC_PROVINCE_CODE;
+	model.province = hcmProvinceName;
+}
 
 	const hcmProvinceName = HCMC_PROVINCE_NAME;
 	let selectedProvinceCode = $state(HCMC_PROVINCE_CODE);
 	let addressMode = $state<AddressMode>('old');
 	let previousProvinceCode = HCMC_PROVINCE_CODE;
 	let previousDistrict = '';
-	let previousAddressMode: AddressMode = 'old';
+let previousAddressMode: AddressMode = 'old';
 	let notifyWhenSupported = $state<'yes' | 'no'>('no');
 	let subscriberEmail = $state('');
 	let subscriberSubmitting = $state(false);
@@ -66,11 +83,9 @@
 	const provinceByCode = $derived(new Map(provinceOptions.map((province) => [province.code, province.name])));
 
 	$effect(() => {
-		if (!model.province && selectedProvinceCode === HCMC_PROVINCE_CODE) {
-			model.province = hcmProvinceName;
-		}
+	if (!selectedProvinceCode) resetProvinceToHcm();
 		if (!provinceByCode.has(selectedProvinceCode)) {
-			selectedProvinceCode = HCMC_PROVINCE_CODE;
+		resetProvinceToHcm();
 		}
 		model.province = provinceByCode.get(selectedProvinceCode) ?? '';
 	});
@@ -80,6 +95,32 @@
 	const wardOptions = $derived(
 		(addressMode === 'old' ? HCM_WARDS_OLD : HCM_WARDS_NEW)[model.district] ?? []
 	);
+	const selectedDateLabel = $derived(
+		dateOptions.find((option: { value: string; label: string }) => option.value === model.scheduledDate)
+			?.label ?? 'Chọn ngày nhận món'
+	);
+	const selectedSlotLabel = $derived(
+		slotOptions.find((option: { value: string; label: string }) => option.value === model.scheduledSlot)
+			?.label ?? 'Chọn khung giờ'
+	);
+	const selectedProvinceLabel = $derived(
+		provinceByCode.get(selectedProvinceCode) ?? 'Chọn Thành phố/Tỉnh'
+	);
+	const provinceSelectOptions = $derived(
+		provinceOptions.map((province) => ({
+			value: province.code,
+			label: province.name,
+			keywords: [province.code]
+		}))
+	);
+	const districtSelectOptions = $derived([
+		{ value: '', label: 'Chọn Quận/Huyện' },
+		...districtOptions.map((district) => ({ value: district.name, label: district.name }))
+	]);
+	const wardSelectOptions = $derived([
+		{ value: '', label: 'Chọn Phường' },
+		...wardOptions.map((ward) => ({ value: ward, label: ward }))
+	]);
 
 	$effect(() => {
 		if (previousProvinceCode !== selectedProvinceCode) {
@@ -95,7 +136,7 @@
 	$effect(() => {
 		if (previousAddressMode !== addressMode) {
 			previousAddressMode = addressMode;
-			selectedProvinceCode = HCMC_PROVINCE_CODE;
+		resetProvinceToHcm();
 			model.district = '';
 			model.ward = '';
 		}
@@ -141,171 +182,203 @@
 	}
 </script>
 
-<div class="relative grid gap-3 sm:grid-cols-2">
-	<label class="text-sm sm:col-span-2">
-		<span class="mb-1 block font-medium">Ngày nhận món</span>
-		<select
-			name="scheduledDate"
-			bind:value={model.scheduledDate}
-			class={controlClass('scheduledDate')}
-			required
-		>
-			{#each dateOptions as option}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</select>
-	</label>
-	<label class="text-sm sm:col-span-2">
-		<span class="mb-1 block font-medium">Khung giờ nhận món (2 giờ)</span>
-		<select
-			name="scheduledSlot"
-			bind:value={model.scheduledSlot}
-			class={controlClass('scheduledSlot')}
-			required
-		>
-			{#each slotOptions as option}
-				<option value={option.value}>{option.label}</option>
-			{/each}
-		</select>
-	</label>
-	<label class="text-sm sm:col-span-2">
-		<span class="mb-1 block font-medium">Họ tên</span>
-		<input
-			name="customerName"
-			bind:value={model.customerName}
-			class={controlClass('customerName')}
-			required
-		/>
-	</label>
-	<label class="text-sm">
-		<span class="mb-1 block font-medium">SĐT</span>
-		<PhoneInput
-			name="phone"
-			bind:value={model.phone}
-			invalid={isInvalid('phone')}
-			controlClass={formControlBaseClass}
-			validClass={formControlValidClass}
-			invalidClass={formControlInvalidClass}
-		/>
-	</label>
-	<fieldset class="text-sm sm:col-span-2">
-		<legend class="mb-1 block font-medium">Loại địa chỉ</legend>
-		<RadioGroup.Root bind:value={addressMode} name="addressMode" class="grid gap-2 sm:grid-cols-2">
-			<label class="inline-flex items-center gap-2 rounded-xl border border-orange-200 px-3 py-2">
-				<RadioGroup.Item value="old" />
-				<span>Địa chỉ cũ (mặc định)</span>
+<div class="relative space-y-5">
+	<section class="space-y-3">
+		<p class="text-sm font-semibold text-slate-800">Thời gian nhận món</p>
+		<div class="grid gap-3 md:grid-cols-2">
+			<label class="text-sm">
+				<span class="mb-1 block font-medium">Ngày nhận món <span class="text-red-600">*</span></span>
+				<Select.Root type="single" bind:value={model.scheduledDate}>
+					<Select.Trigger class={selectControlClass('scheduledDate')} name="scheduledDate">
+						{selectedDateLabel}
+					</Select.Trigger>
+					<Select.Content>
+						{#each dateOptions as option}
+							<Select.Item value={option.value} label={option.label}>{option.label}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
 			</label>
-			<label class="inline-flex items-center gap-2 rounded-xl border border-orange-200 px-3 py-2">
-				<RadioGroup.Item value="new" />
-				<span>Địa chỉ mới</span>
-			</label>
-		</RadioGroup.Root>
-	</fieldset>
-	<label class="text-sm">
-		<span class="mb-1 block font-medium">Thành phố/Tỉnh</span>
-		<select
-			name="province"
-			bind:value={selectedProvinceCode}
-			class={controlClass('province')}
-			required
-		>
-			{#each provinceOptions as province}
-				<option value={province.code}>{province.name}</option>
-			{/each}
-		</select>
-	</label>
-	<label class="text-sm">
-		<span class="mb-1 block font-medium">Quận/Huyện</span>
-		<select
-			name="district"
-			bind:value={model.district}
-			class={controlClass('district')}
-			required
-			disabled={!isHcmProvince}
-		>
-			<option value="">Chọn Quận/Huyện</option>
-			{#each districtOptions as district}
-				<option value={district.name}>{district.name}</option>
-			{/each}
-		</select>
-	</label>
-	<label class="text-sm">
-		<span class="mb-1 block font-medium">Phường</span>
-		<select
-			name="ward"
-			bind:value={model.ward}
-			class={controlClass('ward')}
-			required
-			disabled={!isHcmProvince || !model.district}
-		>
-			<option value="">Chọn Phường</option>
-			{#each wardOptions as ward}
-				<option value={ward}>{ward}</option>
-			{/each}
-		</select>
-	</label>
-	<label class="text-sm sm:col-span-2">
-		<span class="mb-1 block font-medium">Số nhà, tên đường</span>
-		<input
-			name="address"
-			bind:value={model.address}
-			class={controlClass('address')}
-			required
-		/>
-	</label>
-	{#if !isHcmProvince}
-		<div class="sm:col-span-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-			<p class="font-medium">Hiện tại quán chỉ hỗ trợ giao khu vực Thành phố Hồ Chí Minh.</p>
-			<p class="mt-1">
-				Quán đang cố gắng mở rộng sớm đến khu vực của bạn.
-			</p>
-			<div class="mt-3 space-y-2">
-				<p class="font-medium">Bạn có muốn nhận thông báo khi quán hỗ trợ khu vực này không?</p>
-				<RadioGroup.Root
-					bind:value={notifyWhenSupported}
-					name="subscriber"
-					class="flex flex-wrap gap-3"
+			<label class="text-sm">
+				<span class="mb-1 block font-medium"
+					>Khung giờ nhận món (2 giờ) <span class="text-red-600">*</span></span
 				>
-					<label class="inline-flex items-center gap-2">
-						<RadioGroup.Item value="yes" />
-						<span>Có</span>
+				<Select.Root type="single" bind:value={model.scheduledSlot}>
+					<Select.Trigger class={selectControlClass('scheduledSlot')} name="scheduledSlot">
+						{selectedSlotLabel}
+					</Select.Trigger>
+					<Select.Content>
+						{#each slotOptions as option}
+							<Select.Item value={option.value} label={option.label}>{option.label}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</label>
+		</div>
+	</section>
+
+	<Separator class="bg-orange-200/70" />
+
+	<section class="space-y-3">
+		<p class="text-sm font-semibold text-slate-800">Thông tin người nhận</p>
+		<div class="grid gap-3 md:grid-cols-2">
+			<label class="text-sm">
+				<span class="mb-1 block font-medium">Họ tên <span class="text-red-600">*</span></span>
+				<Input
+					name="customerName"
+					bind:value={model.customerName}
+					class={controlClass('customerName')}
+					required
+				/>
+			</label>
+			<label class="text-sm">
+				<span class="mb-1 block font-medium">SĐT <span class="text-red-600">*</span></span>
+				<PhoneInput
+					name="phone"
+					bind:value={model.phone}
+					invalid={isInvalid('phone')}
+					controlClass={phoneControlBaseClass}
+					validClass={formControlValidClass}
+					invalidClass={formControlInvalidClass}
+				/>
+			</label>
+		</div>
+	</section>
+
+	<Separator class="bg-orange-200/70" />
+
+	<section class="space-y-3">
+		<p class="text-sm font-semibold text-slate-800">Thông tin địa chỉ</p>
+		<div class="space-y-3">
+			<fieldset class="text-sm">
+				<legend class="mb-1 block font-medium">Loại địa chỉ</legend>
+				<RadioGroup.Root bind:value={addressMode} name="addressMode" class="grid gap-2 sm:grid-cols-2">
+					<label class={radioOptionClass}>
+						<RadioGroup.Item value="old" />
+						<span>Địa chỉ cũ (mặc định)</span>
 					</label>
-					<label class="inline-flex items-center gap-2">
-						<RadioGroup.Item value="no" />
-						<span>Không</span>
+					<label class={radioOptionClass}>
+						<RadioGroup.Item value="new" />
+						<span>Địa chỉ mới</span>
 					</label>
 				</RadioGroup.Root>
-				{#if notifyWhenSupported === 'yes'}
-					<div class="grid gap-2 sm:grid-cols-[1fr,auto]">
-						<input
-							type="email"
-							bind:value={subscriberEmail}
-							class="w-full rounded-xl border border-amber-300 bg-white px-3 py-2"
-							placeholder="email@domain.com"
-						/>
-						<button
-							class="btn-secondary"
-							type="button"
-							onclick={subscribeUnsupportedArea}
-							disabled={subscriberSubmitting}
-						>
-							{subscriberSubmitting ? 'Đang gửi...' : 'Nhận thông báo'}
-						</button>
-					</div>
-					{#if subscriberMessage}
-						<p class="text-green-700">{subscriberMessage}</p>
-					{/if}
-					{#if subscriberError}
-						<p class="text-red-700">{subscriberError}</p>
-					{/if}
-				{/if}
+			</fieldset>
+			<div class="grid gap-3 md:grid-cols-2">
+				<label class="text-sm">
+					<span class="mb-1 block font-medium">Thành phố/Tỉnh</span>
+					<SelectSearch
+						bind:value={selectedProvinceCode}
+						name="province"
+						options={provinceSelectOptions}
+						placeholder={selectedProvinceLabel}
+						searchPlaceholder="Tìm Tỉnh/Thành..."
+						emptyText="Không tìm thấy Tỉnh/Thành phù hợp."
+						class={selectControlClass('province')}
+					/>
+				</label>
+				<label class="text-sm">
+					<span class="mb-1 block font-medium">Quận/Huyện <span class="text-red-600">*</span></span>
+					<SelectSearch
+						bind:value={model.district}
+						name="district"
+						options={districtSelectOptions}
+						placeholder="Chọn Quận/Huyện"
+						searchPlaceholder="Tìm Quận/Huyện..."
+						emptyText="Không tìm thấy Quận/Huyện phù hợp."
+						disabled={!isHcmProvince}
+						class={selectControlClass('district')}
+					/>
+				</label>
 			</div>
+			<div class="grid gap-3 md:grid-cols-2">
+				<label class="text-sm">
+					<span class="mb-1 block font-medium">Phường <span class="text-red-600">*</span></span>
+					<SelectSearch
+						bind:value={model.ward}
+						name="ward"
+						options={wardSelectOptions}
+						placeholder="Chọn Phường"
+						searchPlaceholder="Tìm Phường..."
+						emptyText="Không tìm thấy Phường phù hợp."
+						disabled={!isHcmProvince || !model.district}
+						class={selectControlClass('ward')}
+					/>
+				</label>
+				<label class="text-sm">
+					<span class="mb-1 block font-medium"
+						>Số nhà, tên đường <span class="text-red-600">*</span></span
+					>
+					<Input
+						name="address"
+						bind:value={model.address}
+						class={controlClass('address')}
+						required
+					/>
+				</label>
+			</div>
+			{#if !isHcmProvince}
+				<div class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+					<p class="font-medium">Hiện tại quán chỉ hỗ trợ giao khu vực Thành phố Hồ Chí Minh.</p>
+					<p class="mt-1">
+						Quán đang cố gắng mở rộng sớm đến khu vực của bạn.
+					</p>
+					<div class="mt-3 space-y-2">
+						<p class="font-medium">Bạn có muốn nhận thông báo khi quán hỗ trợ khu vực này không?</p>
+						<RadioGroup.Root
+							bind:value={notifyWhenSupported}
+							name="subscriber"
+							class="flex flex-wrap gap-3"
+						>
+							<label class={radioOptionClass}>
+								<RadioGroup.Item value="yes" />
+								<span>Có</span>
+							</label>
+							<label class={radioOptionClass}>
+								<RadioGroup.Item value="no" />
+								<span>Không</span>
+							</label>
+						</RadioGroup.Root>
+						{#if notifyWhenSupported === 'yes'}
+							<div class="grid gap-2 sm:grid-cols-[1fr,auto]">
+								<Input
+									type="email"
+									bind:value={subscriberEmail}
+									class="w-full rounded-xl border-amber-300 bg-white"
+									placeholder="email@domain.com"
+								/>
+								<button
+									class="btn-secondary"
+									type="button"
+									onclick={subscribeUnsupportedArea}
+									disabled={subscriberSubmitting}
+								>
+									{subscriberSubmitting ? 'Đang gửi...' : 'Nhận thông báo'}
+								</button>
+							</div>
+							{#if subscriberMessage}
+								<p class="text-green-700">{subscriberMessage}</p>
+							{/if}
+							{#if subscriberError}
+								<p class="text-red-700">{subscriberError}</p>
+							{/if}
+						{/if}
+					</div>
+				</div>
+			{/if}
 		</div>
-	{/if}
-	<label class="text-sm sm:col-span-2">
-		<span class="mb-1 block font-medium">Ghi chú</span>
-		<textarea bind:value={model.note} class="h-24 w-full rounded-xl border border-orange-200 px-3 py-2"></textarea>
-	</label>
+	</section>
+
+	<Separator class="bg-orange-200/70" />
+
+	<section class="space-y-3">
+		<label class="text-sm">
+			<span class="mb-1 block font-medium">Ghi chú</span>
+			<Textarea
+				bind:value={model.note}
+				class={`h-24 ${formControlBaseClass} ${formControlValidClass}`}
+			/>
+		</label>
+	</section>
 	<div class="absolute -left-[9999px] top-auto h-0 w-0 overflow-hidden" aria-hidden="true">
 		<label>
 			Website

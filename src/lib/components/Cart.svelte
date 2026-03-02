@@ -34,7 +34,7 @@
 		transition:fade={{ duration: 180 }}
 	>
 		<div
-			class="absolute inset-x-0 bottom-0 flex w-full max-h-[85dvh] flex-col rounded-t-2xl bg-card p-4 shadow-2xl md:inset-x-auto md:inset-y-0 md:bottom-auto md:right-0 md:h-full md:max-h-screen md:w-[420px] md:rounded-none"
+			class="absolute inset-x-0 bottom-0 flex w-full max-h-[85dvh] flex-col rounded-t-2xl bg-background p-4 shadow-2xl md:inset-x-auto md:inset-y-0 md:bottom-auto md:right-0 md:h-full md:max-h-screen md:w-[420px] md:rounded-none"
 			role="dialog"
 			aria-modal="true"
 			tabindex="-1"
@@ -45,7 +45,7 @@
 			<div class="mb-2 flex justify-center md:hidden">
 				<div class="h-1.5 w-12 rounded-full bg-slate-300"></div>
 			</div>
-			<div class="mb-4 flex items-center justify-between">
+			<div class="mb-3 flex items-center justify-between border-b border-orange-100 pb-3">
 				<h2 class="text-lg font-semibold">Giỏ hàng</h2>
 				<button class="btn-secondary" type="button" onclick={onClose}>Đóng</button>
 			</div>

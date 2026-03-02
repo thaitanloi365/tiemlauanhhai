@@ -46,8 +46,8 @@
 		}
 	}}
 >
-	<div class="mx-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-card p-4 shadow-2xl sm:p-5">
-		<div class="flex items-center justify-between gap-3">
+	<div class="mx-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-background p-4 shadow-2xl sm:p-5">
+		<div class="flex items-center justify-between gap-3 border-b border-orange-100 pb-3">
 			<h2 class="text-xl font-semibold">Xác nhận thông tin đơn hàng</h2>
 			<button class="btn-secondary" type="button" onclick={onCancel} disabled={submitting}>Đóng</button>
 		</div>
@@ -118,13 +118,13 @@
 
 			<section class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-950">
 				<p class="font-medium">Lưu ý vận chuyển</p>
-				<p class="mt-1">Khách hàng thanh toán tiền món ăn cho nhà hàng.</p>
-				<p class="mt-1">Nhà hàng sẽ tạo đơn bên vận chuyển và ưu tiên mức phí thấp nhất có thể cho bạn.</p>
-				<p class="mt-1">Phí vận chuyển sẽ được nhà hàng xác nhận lại sau khi lên đơn giao hàng.</p>
+				<p class="mt-1">Giá món ăn chưa bao gồm phí vận chuyển.</p>
+				<p class="mt-1">Sau khi xác nhận đơn, nhà hàng sẽ kiểm tra mức phí với đơn vị vận chuyển.</p>
+				<p class="mt-1">Nhà hàng sẽ thông tin lại để mình thanh toán phí vận chuyển giúp đơn được giao nhanh nhất ạ.</p>
 			</section>
 		</div>
 
-		<div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+		<div class="mt-5 flex flex-col gap-2 border-t border-orange-100 pt-4 sm:flex-row sm:justify-end">
 			<button class="btn-secondary" type="button" onclick={onCancel} disabled={submitting}>
 				Quay lại chỉnh sửa
 			</button>

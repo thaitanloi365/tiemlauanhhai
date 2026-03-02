@@ -7,6 +7,7 @@
 	import Footer from '$lib/components/Footer.svelte';
 	import Header from '$lib/components/Header.svelte';
 	import MediaGallery from '$lib/components/MediaGallery.svelte';
+	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
 	import { cartStore } from '$lib/stores/cart';
 	import { formatCurrency } from '$lib/utils/format';
 	import type { MenuItem, MenuVariant } from '$lib/types';
@@ -20,9 +21,11 @@
 	let handledQuickAdd = $state(false);
 
 	$effect(() => {
-		if (!selectedVariantId) {
-			selectedVariantId = data.item.variants[0]?.id;
-		}
+		const variants = data.item.variants;
+		const hasSelectedVariant = variants.some((variant: MenuVariant) => variant.id === selectedVariantId);
+		if (hasSelectedVariant) return;
+
+		selectedVariantId = variants[0]?.id;
 	});
 
 	$effect(() => {
@@ -150,17 +153,19 @@
 
 			<div class="space-y-2">
 				<p class="font-medium">Chọn phần ăn</p>
-				{#each data.item.variants as variant}
-					<label
-						class="flex cursor-pointer items-center justify-between rounded-xl border-[0.5px] border-orange-500/70 px-3 py-2"
-					>
-						<div class="flex items-center gap-2">
-							<input type="radio" bind:group={selectedVariantId} value={variant.id} />
-							<span>{variant.name}</span>
-						</div>
-						<strong>{formatCurrency(variant.price)}</strong>
-					</label>
-				{/each}
+				<RadioGroup.Root bind:value={selectedVariantId} class="gap-2">
+					{#each data.item.variants as variant}
+						<label
+							class="flex cursor-pointer items-center justify-between rounded-xl border-[0.5px] border-orange-500/70 px-3 py-2"
+						>
+							<div class="flex items-center gap-2">
+								<RadioGroup.Item value={variant.id} />
+								<span>{variant.name}</span>
+							</div>
+							<strong>{formatCurrency(variant.price)}</strong>
+						</label>
+					{/each}
+				</RadioGroup.Root>
 			</div>
 
 			<div class="flex items-center gap-3">
@@ -245,7 +250,7 @@
 						alt={item.name}
 						loading="lazy"
 						decoding="async"
-						class="h-32 w-full rounded-xl object-cover"
+						class="aspect-video w-full rounded-xl object-cover"
 					/>
 					<p class="mt-2 font-medium">{item.name}</p>
 				</a>

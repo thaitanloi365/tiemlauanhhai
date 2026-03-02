@@ -5,6 +5,7 @@
 	import { HCM_WARDS_OLD } from '$lib/data/hcm-wards-old';
 	import { PROVINCES_NEW } from '$lib/data/provinces-new';
 	import { HCMC_PROVINCE_CODE, HCMC_PROVINCE_NAME, PROVINCES_OLD } from '$lib/data/provinces-old';
+	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
 
 	type AddressMode = 'old' | 'new';
 
@@ -233,16 +234,16 @@
 	</label>
 	<fieldset class="text-sm sm:col-span-2">
 		<legend class="mb-1 block font-medium">Loại địa chỉ</legend>
-		<div class="grid gap-2 sm:grid-cols-2">
+		<RadioGroup.Root bind:value={addressMode} name="addressMode" class="grid gap-2 sm:grid-cols-2">
 			<label class="inline-flex items-center gap-2 rounded-xl border border-orange-200 px-3 py-2">
-				<input type="radio" name="addressMode" value="old" bind:group={addressMode} />
+				<RadioGroup.Item value="old" />
 				<span>Địa chỉ cũ (mặc định)</span>
 			</label>
 			<label class="inline-flex items-center gap-2 rounded-xl border border-orange-200 px-3 py-2">
-				<input type="radio" name="addressMode" value="new" bind:group={addressMode} />
+				<RadioGroup.Item value="new" />
 				<span>Địa chỉ mới</span>
 			</label>
-		</div>
+		</RadioGroup.Root>
 	</fieldset>
 	<label class="text-sm">
 		<span class="mb-1 block font-medium">Thành phố/Tỉnh</span>
@@ -312,16 +313,20 @@
 			</p>
 			<div class="mt-3 space-y-2">
 				<p class="font-medium">Bạn có muốn nhận thông báo khi quán hỗ trợ khu vực này không?</p>
-				<div class="flex flex-wrap gap-3">
+				<RadioGroup.Root
+					bind:value={notifyWhenSupported}
+					name="subscriber"
+					class="flex flex-wrap gap-3"
+				>
 					<label class="inline-flex items-center gap-2">
-						<input type="radio" name="subscriber" value="yes" bind:group={notifyWhenSupported} />
+						<RadioGroup.Item value="yes" />
 						<span>Có</span>
 					</label>
 					<label class="inline-flex items-center gap-2">
-						<input type="radio" name="subscriber" value="no" bind:group={notifyWhenSupported} />
+						<RadioGroup.Item value="no" />
 						<span>Không</span>
 					</label>
-				</div>
+				</RadioGroup.Root>
 				{#if notifyWhenSupported === 'yes'}
 					<div class="grid gap-2 sm:grid-cols-[1fr,auto]">
 						<input

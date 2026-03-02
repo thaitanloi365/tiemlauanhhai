@@ -33,14 +33,14 @@
 					onclick={() => (active = idx)}
 				>
 					{#if entry.type === 'video'}
-						<div class="flex h-16 w-24 items-center justify-center bg-slate-200 text-xs font-medium">Video</div>
+						<div class="flex w-24 aspect-video items-center justify-center bg-slate-200 text-xs font-medium">Video</div>
 					{:else}
 						<img
 							src={entry.url}
 							alt={entry.alt_text || 'thumb'}
 							loading="lazy"
 							decoding="async"
-							class="h-16 w-24 object-cover"
+							class="w-24 aspect-video object-cover"
 						/>
 					{/if}
 				</button>

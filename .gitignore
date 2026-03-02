@@ -1,12 +1,23 @@
 node_modules
 
-# Output
-.output
+# Next.js
+.next/
+out/
+
+# Deployment / platform output
 .vercel
 .netlify
 .wrangler
-/.svelte-kit
-/build
+
+# Build output
+build/
+.output/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # OS
 .DS_Store
@@ -17,7 +28,3 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
-
-# Vite
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*

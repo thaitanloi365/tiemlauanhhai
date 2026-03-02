@@ -1,59 +1,82 @@
-import { browser } from '$app/environment';
-import { derived, writable } from 'svelte/store';
-import type { CartLine } from '$lib/types';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import type { StateStorage } from 'zustand/middleware';
+import type { CartLine } from '@/lib/types';
 
 const STORAGE_KEY = 'tiemlauanhhai_cart';
 
-function loadCart(): CartLine[] {
-	if (!browser) return [];
-	try {
-		const value = localStorage.getItem(STORAGE_KEY);
-		return value ? (JSON.parse(value) as CartLine[]) : [];
-	} catch {
-		return [];
-	}
-}
+type CartState = {
+  lines: CartLine[];
+  add: (line: Omit<CartLine, 'quantity'>, quantity?: number) => void;
+  updateQuantity: (variantId: string, quantity: number) => void;
+  remove: (variantId: string) => void;
+  clear: () => void;
+};
 
-function createCartStore() {
-	const store = writable<CartLine[]>(loadCart());
+export const selectCartCount = (state: CartState) =>
+  state.lines.reduce((sum, line) => sum + line.quantity, 0);
+export const selectCartTotal = (state: CartState) =>
+  state.lines.reduce((sum, line) => sum + line.quantity * line.price, 0);
 
-	if (browser) {
-		store.subscribe((value) => localStorage.setItem(STORAGE_KEY, JSON.stringify(value)));
-		window.addEventListener('storage', (event) => {
-			if (event.key === STORAGE_KEY) {
-				store.set(loadCart());
-			}
-		});
-	}
+export const useCartStore = create<CartState>()(
+  persist(
+    (set) => ({
+      lines: [],
+      add: (line, quantity = 1) =>
+        set((state) => {
+          const index = state.lines.findIndex(
+            (item) => item.variantId === line.variantId,
+          );
+          if (index >= 0) {
+            const lines = [...state.lines];
+            lines[index] = {
+              ...lines[index],
+              quantity: lines[index].quantity + quantity,
+            };
+            return { lines };
+          }
 
-	return {
-		subscribe: store.subscribe,
-		add: (line: Omit<CartLine, 'quantity'>, quantity = 1) =>
-			store.update((lines) => {
-				const idx = lines.findIndex((item) => item.variantId === line.variantId);
-				if (idx >= 0) {
-					lines[idx].quantity += quantity;
-					return [...lines];
-				}
-				return [...lines, { ...line, quantity }];
-			}),
-		updateQuantity: (variantId: string, quantity: number) =>
-			store.update((lines) =>
-				lines
-					.map((line) => (line.variantId === variantId ? { ...line, quantity: Math.max(1, quantity) } : line))
-					.filter((line) => line.quantity > 0)
-			),
-		remove: (variantId: string) => store.update((lines) => lines.filter((line) => line.variantId !== variantId)),
-		clear: () => store.set([])
-	};
-}
+          return { lines: [...state.lines, { ...line, quantity }] };
+        }),
+      updateQuantity: (variantId, quantity) =>
+        set((state) => ({
+          lines: state.lines
+            .map((line) =>
+              line.variantId === variantId
+                ? { ...line, quantity: Math.max(1, quantity) }
+                : line,
+            )
+            .filter((line) => line.quantity > 0),
+        })),
+      remove: (variantId) =>
+        set((state) => ({
+          lines: state.lines.filter((line) => line.variantId !== variantId),
+        })),
+      clear: () => set({ lines: [] }),
+    }),
+    {
+      name: STORAGE_KEY,
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined') return localStorage;
 
-export const cartStore = createCartStore();
-
-export const cartCount = derived(cartStore, ($cartStore) =>
-	$cartStore.reduce((sum, line) => sum + line.quantity, 0)
+        const noopStorage: StateStorage = {
+          getItem: () => null,
+          setItem: () => undefined,
+          removeItem: () => undefined,
+        };
+        return noopStorage;
+      }),
+      partialize: (state) => ({ lines: state.lines }),
+    },
+  ),
 );
 
-export const cartTotal = derived(cartStore, ($cartStore) =>
-	$cartStore.reduce((sum, line) => sum + line.quantity * line.price, 0)
-);
+// Compatibility object so existing call sites can keep cartStore.add/update/remove/clear.
+export const cartStore = {
+  add: (line: Omit<CartLine, 'quantity'>, quantity = 1) =>
+    useCartStore.getState().add(line, quantity),
+  updateQuantity: (variantId: string, quantity: number) =>
+    useCartStore.getState().updateQuantity(variantId, quantity),
+  remove: (variantId: string) => useCartStore.getState().remove(variantId),
+  clear: () => useCartStore.getState().clear(),
+};

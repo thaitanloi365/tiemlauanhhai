@@ -1,6 +1,5 @@
-import { PUBLIC_SUPABASE_PUBLISHABLE_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public';
-import { createClient } from '@supabase/supabase-js';
-
-export const browserSupabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
-	auth: { persistSession: false }
-});
+export {
+  browserSupabase,
+  createBrowserSupabase,
+  hasSupabaseBrowserConfig,
+} from '@/lib/supabase/client';

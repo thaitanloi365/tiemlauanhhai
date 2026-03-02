@@ -25,7 +25,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <NuqsAdapter>
           <PublicPageTransition>{children}</PublicPageTransition>
         </NuqsAdapter>
-        <Toaster position="top-center" richColors />
+        <Toaster
+          position="top-center"
+          richColors
+          toastOptions={{
+            classNames: {
+              toast:
+                'border-input bg-card text-foreground shadow-lg rounded-xl',
+              title: 'text-foreground font-medium',
+              description: 'text-muted-foreground',
+              actionButton:
+                'bg-primary text-primary-foreground hover:bg-primary/90 border-0',
+              cancelButton:
+                'bg-secondary text-secondary-foreground hover:bg-secondary/90 border-0',
+            },
+          }}
+        />
       </QueryClientProvider>
     </ThemeProvider>
   );

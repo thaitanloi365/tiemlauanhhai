@@ -62,6 +62,7 @@ export function MenuDetail({ item }: Props) {
       thumbnailUrl: item.thumbnail_url,
     });
     toast.success(`Đã thêm ${item.name} vào giỏ hàng`, {
+      duration: 5000,
       action: {
         label: 'Xem giỏ hàng',
         onClick: openVisibleCartDrawer,

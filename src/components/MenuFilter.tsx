@@ -23,14 +23,28 @@ export type MenuFilterState = {
 type Props = {
   categories: Array<{ slug: string; name: string }>;
   onChange?: (state: MenuFilterState) => void;
+  showAllCategoryOption?: boolean;
 };
 
-export function MenuFilter({ categories, onChange }: Props) {
+export function MenuFilter({
+  categories,
+  onChange,
+  showAllCategoryOption = true,
+}: Props) {
   const [filters, setFilters] = useQueryStates({
     category: parseAsString.withDefault(''),
     price: parseAsStringEnum([...PRICE_OPTIONS]).withDefault(''),
     sort: parseAsStringEnum([...SORT_OPTIONS]).withDefault('popular'),
   });
+
+  useEffect(() => {
+    if (showAllCategoryOption || categories.length === 0) return;
+
+    const onlyCategorySlug = categories[0].slug;
+    if (filters.category !== onlyCategorySlug) {
+      void setFilters({ category: onlyCategorySlug });
+    }
+  }, [categories, filters.category, setFilters, showAllCategoryOption]);
 
   useEffect(() => {
     onChange?.(filters as MenuFilterState);
@@ -42,16 +56,28 @@ export function MenuFilter({ categories, onChange }: Props) {
         <div className="text-sm">
           <Label className="mb-1 block">Danh mục</Label>
           <Select
-            value={filters.category || 'all'}
+            value={
+              filters.category ||
+              (showAllCategoryOption ? 'all' : (categories[0]?.slug ?? ''))
+            }
             onValueChange={(value) =>
-              setFilters({ category: value === 'all' ? '' : value })
+              setFilters({
+                category:
+                  showAllCategoryOption && value === 'all' ? '' : value,
+              })
             }
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Tất cả" />
+              <SelectValue
+                placeholder={
+                  showAllCategoryOption ? 'Tất cả' : (categories[0]?.name ?? '')
+                }
+              />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
+              {showAllCategoryOption ? (
+                <SelectItem value="all">Tất cả</SelectItem>
+              ) : null}
               {categories.map((category) => (
                 <SelectItem key={category.slug} value={category.slug}>
                   {category.name}

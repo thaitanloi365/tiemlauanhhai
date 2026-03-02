@@ -25,20 +25,33 @@ function matchesPrice(price: number, range: MenuFilterState['price']) {
 }
 
 export function MenuPageClient({ categories, menuItems }: Props) {
+  const mainCategories = useMemo(
+    () => categories.filter((entry) => entry.slug === 'lau'),
+    [categories],
+  );
+
+  const primaryCategory = mainCategories[0];
+  const activeCategories = primaryCategory ? [primaryCategory] : categories;
+
+  const menuItemsForMenuPage = useMemo(() => {
+    if (!primaryCategory) return menuItems;
+    return menuItems.filter((item) => item.category_id === primaryCategory.id);
+  }, [menuItems, primaryCategory]);
+
   const [filters, setFilters] = useState<MenuFilterState>({
-    category: '',
+    category: primaryCategory?.slug ?? '',
     price: '',
     sort: 'popular',
   });
   const [openDrawer, setOpenDrawer] = useState(false);
 
   const categorySlugById = useMemo(
-    () => new Map(categories.map((entry) => [entry.id, entry.slug])),
-    [categories],
+    () => new Map(activeCategories.map((entry) => [entry.id, entry.slug])),
+    [activeCategories],
   );
 
   const filteredItems = useMemo(() => {
-    const items = menuItems.filter((item) => {
+    const items = menuItemsForMenuPage.filter((item) => {
       const minPrice = Math.min(...item.variants.map((entry) => entry.price));
       const categorySlug = categorySlugById.get(item.category_id) || '';
       const categoryOk = !filters.category || categorySlug === filters.category;
@@ -59,7 +72,7 @@ export function MenuPageClient({ categories, menuItems }: Props) {
       }
       return a.sort_order - b.sort_order;
     });
-  }, [menuItems, filters, categorySlugById]);
+  }, [menuItemsForMenuPage, filters, categorySlugById]);
 
   return (
     <>
@@ -76,10 +89,11 @@ export function MenuPageClient({ categories, menuItems }: Props) {
           </Button>
         </div>
         <MenuFilter
-          categories={categories.map((entry) => ({
+          categories={activeCategories.map((entry) => ({
             slug: entry.slug,
             name: entry.name,
           }))}
+          showAllCategoryOption={false}
           onChange={setFilters}
         />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

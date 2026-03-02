@@ -27,6 +27,7 @@ export function BottomNav() {
             <button
               type="button"
               className={`relative text-sm font-medium ${pathname === '/cart' ? 'text-primary' : 'text-muted-foreground'}`}
+              data-cart-drawer-trigger="bottom-nav"
               onClick={openDrawer}
             >
               Giỏ hàng

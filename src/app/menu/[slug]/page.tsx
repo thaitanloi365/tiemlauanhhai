@@ -31,7 +31,7 @@ export default async function MenuDetailPage({ params }: PageProps) {
             <h2 className="mb-4 text-xl font-semibold">Gọi thêm</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {toppings.map((entry) => (
-                <MenuItem key={entry.id} item={entry} />
+                <MenuItem key={entry.id} item={entry} detailMode="dialog" />
               ))}
             </div>
           </section>
@@ -41,7 +41,7 @@ export default async function MenuDetailPage({ params }: PageProps) {
             <h2 className="mb-4 text-xl font-semibold">Đồ uống</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {drinks.map((entry) => (
-                <MenuItem key={entry.id} item={entry} />
+                <MenuItem key={entry.id} item={entry} detailMode="dialog" />
               ))}
             </div>
           </section>

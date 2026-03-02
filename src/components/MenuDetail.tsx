@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import type { MenuItem } from '@/lib/types';
 import { useCartStore } from '@/lib/stores/cart';
 import { formatCurrency } from '@/lib/utils/format';
@@ -30,6 +31,24 @@ export function MenuDetail({ item }: Props) {
         ? `Từ ${selectedVariant.serves_min} người ăn`
         : null;
 
+  const openVisibleCartDrawer = () => {
+    if (typeof window === 'undefined') return;
+    const triggers = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('[data-cart-drawer-trigger]'),
+    );
+    const visibleTrigger = triggers.find((trigger) => {
+      const styles = window.getComputedStyle(trigger);
+      const rect = trigger.getBoundingClientRect();
+      return (
+        styles.display !== 'none' &&
+        styles.visibility !== 'hidden' &&
+        rect.width > 0 &&
+        rect.height > 0
+      );
+    });
+    visibleTrigger?.click();
+  };
+
   const addToCart = () => {
     if (!selectedVariant) return;
     add({
@@ -41,6 +60,12 @@ export function MenuDetail({ item }: Props) {
       itemNote: item.note,
       price: selectedVariant.price,
       thumbnailUrl: item.thumbnail_url,
+    });
+    toast.success(`Đã thêm ${item.name} vào giỏ hàng`, {
+      action: {
+        label: 'Xem giỏ hàng',
+        onClick: openVisibleCartDrawer,
+      },
     });
   };
 

@@ -5,12 +5,22 @@ import type { MenuItem as MenuItemType } from '@/lib/types';
 import { useCartStore } from '@/lib/stores/cart';
 import { formatCurrency } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 type Props = {
   item: MenuItemType;
+  detailMode?: 'page' | 'dialog';
 };
 
-export function MenuItem({ item }: Props) {
+export function MenuItem({ item, detailMode = 'page' }: Props) {
   const add = useCartStore((state) => state.add);
   const minPrice = Math.min(...item.variants.map((variant) => variant.price));
   const maxPrice = Math.max(...item.variants.map((variant) => variant.price));
@@ -33,11 +43,13 @@ export function MenuItem({ item }: Props) {
 
   return (
     <div className="card-surface relative flex h-full flex-col overflow-hidden">
-      <Link
-        href={`/menu/${item.slug}`}
-        aria-label={`Xem chi tiet ${item.name}`}
-        className="absolute inset-0 z-10"
-      />
+      {detailMode === 'page' ? (
+        <Link
+          href={`/menu/${item.slug}`}
+          aria-label={`Xem chi tiet ${item.name}`}
+          className="absolute inset-0 z-10"
+        />
+      ) : null}
       <div className="aspect-video w-full overflow-hidden">
         <img
           src={item.thumbnail_url || '/logo.png'}
@@ -59,11 +71,62 @@ export function MenuItem({ item }: Props) {
               : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`}
           </p>
           <div className="relative z-20 mt-2 flex gap-2">
-            <Button asChild variant="outline" className="flex-1">
-              <Link href={`/menu/${item.slug}`} className="text-center">
-                Chi tiết
-              </Link>
-            </Button>
+            {detailMode === 'dialog' ? (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline" className="flex-1">
+                    Chi tiết
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[85dvh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{item.name}</DialogTitle>
+                    <DialogDescription>
+                      {item.description ?? 'Món ngon chuẩn vị miền Tây'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3">
+                    <img
+                      src={item.thumbnail_url || '/logo.png'}
+                      alt={item.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="aspect-video w-full rounded-lg object-cover"
+                    />
+                    {item.ingredients ? (
+                      <p className="text-sm text-muted-foreground">
+                        Nguyên liệu: {item.ingredients}
+                      </p>
+                    ) : null}
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="mb-2 text-sm font-semibold">Khẩu phần</p>
+                      <div className="space-y-1">
+                        {item.variants.map((variant) => (
+                          <p
+                            key={variant.id}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <span>{variant.name}</span>
+                            <strong>{formatCurrency(variant.price)}</strong>
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" className="w-full" onClick={onQuickAdd}>
+                      Thêm vào giỏ
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            ) : (
+              <Button asChild variant="outline" className="flex-1">
+                <Link href={`/menu/${item.slug}`} className="text-center">
+                  Chi tiết
+                </Link>
+              </Button>
+            )}
             <Button type="button" className="flex-1" onClick={onQuickAdd}>
               Thêm vào giỏ
             </Button>

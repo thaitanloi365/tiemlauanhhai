@@ -11,6 +11,7 @@ export function CartButton() {
           type="button"
           variant="outline"
           className="relative"
+          data-cart-drawer-trigger="header"
           onClick={openDrawer}
         >
           Giỏ hàng

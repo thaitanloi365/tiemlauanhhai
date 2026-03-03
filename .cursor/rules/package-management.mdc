@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Must use "bun" instead of "npm"

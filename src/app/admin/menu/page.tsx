@@ -276,13 +276,16 @@ export default function AdminMenuPage() {
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-                  <div className="inline-flex cursor-pointer items-center gap-2 text-sm">
+                  <div className="inline-flex items-center gap-2 text-sm">
                     <Checkbox
+                      id={`menu-item-availability-${item.id}`}
                       checked={item.is_available}
                       disabled={savingId === item.id}
                       onCheckedChange={() => toggleAvailable(item)}
                     />
-                    <Label>{item.is_available ? 'Đang bán' : 'Đang ẩn'}</Label>
+                    <Label htmlFor={`menu-item-availability-${item.id}`}>
+                      {item.is_available ? 'Đang bán' : 'Đang ẩn'}
+                    </Label>
                   </div>
                   <Button
                     type="button"

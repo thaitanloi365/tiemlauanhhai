@@ -50,10 +50,17 @@ const EMPTY_FORM: OrderFormModel = {
 type MenuRuleItem = {
   id: string;
   name: string;
+  category_id?: string;
+  is_main_dish?: boolean;
   block_today?: boolean;
   block_today_reason?: string | null;
   blocked_delivery_dates?: string[] | null;
   blocked_delivery_date_reasons?: Record<string, string> | null;
+};
+
+type CategoryRuleItem = {
+  id: string;
+  slug?: string;
 };
 
 export default function CartPage() {
@@ -84,13 +91,21 @@ export default function CartPage() {
         const data = await response.json();
         if (!response.ok) return;
         const menuItems = (data?.menuItems ?? []) as MenuRuleItem[];
+        const categories = (data?.categories ?? []) as CategoryRuleItem[];
         const menuItemById = new Map(menuItems.map((item) => [item.id, item]));
+        const categoryById = new Map(
+          categories.map((category) => [category.id, category.slug ?? '']),
+        );
         const selectedDates = new Set(dateOptions.map((option) => option.value));
         const reasonsByDate = new Map<string, Set<string>>();
 
         for (const line of lines) {
           const menuItem = menuItemById.get(line.itemId);
           if (!menuItem) continue;
+          const isMainDishItem =
+            menuItem.is_main_dish === true ||
+            categoryById.get(menuItem.category_id ?? '') === 'lau';
+          if (!isMainDishItem) continue;
           const itemLabel = menuItem.name;
           const todayReason =
             menuItem.block_today_reason?.trim() ||

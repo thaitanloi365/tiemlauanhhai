@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { format, isValid, parse } from 'date-fns';
+import { CalendarDays } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { formatCurrencyInput, parseCurrencyInput } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -18,6 +21,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -25,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 type CategoryOption = { id: string; name: string };
 type MediaEntry = {
@@ -86,6 +95,11 @@ function toBlockedDateRules(
     date,
     reason: reasonMap?.[date]?.trim() ?? '',
   }));
+}
+
+function parseBlockedDate(value: string) {
+  const parsed = parse(value, 'yyyy-MM-dd', new Date());
+  return isValid(parsed) ? parsed : undefined;
 }
 
 const variantFormSchema = z.object({
@@ -371,6 +385,7 @@ export function MenuItemForm({
     }
   }
   const thumbnailUrl = watch('thumbnailUrl');
+  const isMainDish = watch('isMainDish');
   const blockedDateRules = watch('blockedDateRules');
   const missingReasonDates = useMemo(
     () =>
@@ -384,6 +399,13 @@ export function MenuItemForm({
     [blockedDateRules],
   );
   const hasRealtimeBlockedDateIssue = missingReasonDates.length > 0;
+
+  useEffect(() => {
+    if (isMainDish) return;
+    setValue('blockToday', false, { shouldDirty: true });
+    setValue('blockTodayReason', '', { shouldDirty: true });
+    setValue('blockedDateRules', [], { shouldDirty: true });
+  }, [isMainDish, setValue]);
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -505,12 +527,13 @@ export function MenuItemForm({
               name="isTopping"
               render={({ field }) => (
                 <Checkbox
+                  id="menu-item-is-topping"
                   checked={field.value}
                   onCheckedChange={(value) => field.onChange(value === true)}
                 />
               )}
             />
-            <Label>Là topping</Label>
+            <Label htmlFor="menu-item-is-topping">Là topping</Label>
           </div>
           <div className="flex items-center gap-2">
             <Controller
@@ -518,12 +541,13 @@ export function MenuItemForm({
               name="isMainDish"
               render={({ field }) => (
                 <Checkbox
+                  id="menu-item-is-main-dish"
                   checked={field.value}
                   onCheckedChange={(value) => field.onChange(value === true)}
                 />
               )}
             />
-            <Label>Là món chính</Label>
+            <Label htmlFor="menu-item-is-main-dish">Là món chính</Label>
           </div>
           <div className="flex items-center gap-2 sm:col-span-2">
             <Controller
@@ -531,17 +555,20 @@ export function MenuItemForm({
               name="blockToday"
               render={({ field }) => (
                 <Checkbox
+                  id="menu-item-block-today"
                   checked={field.value}
+                  disabled={!isMainDish}
                   onCheckedChange={(value) => field.onChange(value === true)}
                 />
               )}
             />
-            <Label>Không giao trong hôm nay</Label>
+            <Label htmlFor="menu-item-block-today">Không giao trong hôm nay</Label>
           </div>
           <div className="grid gap-1 sm:col-span-2">
             <Label>Lý do chặn hôm nay</Label>
             <Input
               placeholder="Ví dụ: Món này chỉ bán ngày mai do hết nguyên liệu"
+              disabled={!isMainDish}
               {...register('blockTodayReason')}
             />
           </div>
@@ -553,22 +580,73 @@ export function MenuItemForm({
                 size="sm"
                 variant="outline"
                 onClick={() => appendBlockedDateRule({ date: '', reason: '' })}
+                disabled={!isMainDish}
               >
                 Thêm ngày chặn
               </Button>
             </div>
+            {!isMainDish ? (
+              <p className="text-xs text-muted-foreground">
+                Tính năng chặn ngày giao chỉ áp dụng cho món chính.
+              </p>
+            ) : null}
             {blockedDateRuleFields.length === 0 ? (
               <p className="text-xs text-muted-foreground">
                 Chưa có ngày nào bị chặn.
               </p>
             ) : null}
             <div className="space-y-2">
+              {blockedDateRuleFields.length > 0 ? (
+                <div className="hidden grid-cols-[220px,1fr,96px] gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
+                  <p>Ngày chặn</p>
+                  <p>Lý do</p>
+                  <p className="text-right">Hành động</p>
+                </div>
+              ) : null}
               {blockedDateRuleFields.map((field, index) => (
-                <div key={field.id} className="grid gap-2 rounded-md border p-3 sm:grid-cols-[160px,1fr,96px]">
+                <div
+                  key={field.id}
+                  className="grid gap-2 rounded-md border p-3 sm:grid-cols-[220px,1fr,96px]"
+                >
                   <div>
-                    <Input
-                      type="date"
-                      {...register(`blockedDateRules.${index}.date`)}
+                    <Controller
+                      control={control}
+                      name={`blockedDateRules.${index}.date`}
+                      render={({ field: dateField }) => {
+                        const selectedDate = parseBlockedDate(dateField.value ?? '');
+                        return (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={!isMainDish}
+                                className={cn(
+                                  'w-full justify-start text-left font-normal',
+                                  !dateField.value && 'text-muted-foreground',
+                                )}
+                              >
+                                <CalendarDays className="mr-2 h-4 w-4" />
+                                {selectedDate
+                                  ? format(selectedDate, 'dd/MM/yyyy')
+                                  : 'Chọn ngày'}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={(date) =>
+                                  dateField.onChange(
+                                    date ? format(date, 'yyyy-MM-dd') : '',
+                                  )
+                                }
+                                disabled={{ before: new Date(1970, 0, 1) }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        );
+                      }}
                     />
                     {errors.blockedDateRules?.[index]?.date?.message ? (
                       <p className="mt-1 text-xs text-destructive">
@@ -579,6 +657,7 @@ export function MenuItemForm({
                   <div>
                     <Input
                       placeholder="Lý do chặn ngày này"
+                      disabled={!isMainDish}
                       {...register(`blockedDateRules.${index}.reason`)}
                     />
                     {errors.blockedDateRules?.[index]?.reason?.message ? (
@@ -591,6 +670,7 @@ export function MenuItemForm({
                     type="button"
                     variant="destructive"
                     size="sm"
+                    disabled={!isMainDish}
                     onClick={() => removeBlockedDateRule(index)}
                   >
                     Xóa

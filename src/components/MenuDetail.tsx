@@ -128,18 +128,26 @@ export function MenuDetail({ item }: Props) {
             className="mt-4 space-y-2"
           >
             {item.variants.map((variant) => (
-              <Label
+              <div
                 key={variant.id}
                 className="flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-colors hover:border-primary/60"
               >
                 <div className="flex items-center gap-2">
-                  <RadioGroupItem value={variant.id} />
-                  <span>{variant.name}</span>
+                  <RadioGroupItem
+                    id={`menu-detail-variant-${variant.id}`}
+                    value={variant.id}
+                  />
+                  <Label
+                    htmlFor={`menu-detail-variant-${variant.id}`}
+                    className="cursor-pointer"
+                  >
+                    {variant.name}
+                  </Label>
                 </div>
                 <strong className="text-primary">
                   {formatCurrency(variant.price)}
                 </strong>
-              </Label>
+              </div>
             ))}
           </RadioGroup>
           <Button

@@ -176,6 +176,14 @@ function getDateBlockedMenuItems(
     .filter(Boolean) as Array<MenuRuleItem & { active_reason: string }>;
 }
 
+function isMainDishMenuItem(
+  menuItem: MenuRuleItem,
+  categoryById: Map<string, string>,
+) {
+  if (menuItem.is_main_dish) return true;
+  return categoryById.get(menuItem.category_id ?? '') === 'lau';
+}
+
 function countRecentActiveOrdersByPhoneMock(phone: string) {
   const now = Date.now();
   return mockDb.getAllOrders().filter((order) => {
@@ -294,9 +302,12 @@ export async function POST(request: NextRequest) {
           .filter(Boolean) as MenuRuleItem[],
       ),
     );
+    const mainDishItemsInOrder = menuItemsInOrder.filter((menuItem) =>
+      isMainDishMenuItem(menuItem, categoryById),
+    );
     const blockedMenuItems = getDateBlockedMenuItems(
       body.scheduledDate,
-      menuItemsInOrder,
+      mainDishItemsInOrder,
     );
     if (blockedMenuItems.length > 0) {
       return NextResponse.json(
@@ -458,9 +469,12 @@ export async function POST(request: NextRequest) {
       category_id: item.categoryId,
     }),
   );
+  const mainDishItemsInOrder = menuItemsInOrder.filter((menuItem) =>
+    isMainDishMenuItem(menuItem, categoryById),
+  );
   const blockedMenuItems = getDateBlockedMenuItems(
     body.scheduledDate,
-    menuItemsInOrder,
+    mainDishItemsInOrder,
   );
   if (blockedMenuItems.length > 0) {
     return NextResponse.json(

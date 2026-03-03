@@ -43,6 +43,11 @@ export const sampleMenuItems: MenuItem[] = [
     thumbnail_url: MENU_IMAGE,
     is_available: true,
     is_topping: false,
+    is_main_dish: true,
+    block_today: false,
+    block_today_reason: null,
+    blocked_delivery_dates: [],
+    blocked_delivery_date_reasons: {},
     sort_order: 1,
     media: [
       {
@@ -87,6 +92,11 @@ export const sampleMenuItems: MenuItem[] = [
     thumbnail_url: MENU_IMAGE,
     is_available: true,
     is_topping: false,
+    is_main_dish: true,
+    block_today: false,
+    block_today_reason: null,
+    blocked_delivery_dates: [],
+    blocked_delivery_date_reasons: {},
     sort_order: 2,
     media: [
       {
@@ -127,6 +137,11 @@ export const sampleMenuItems: MenuItem[] = [
     thumbnail_url: MENU_IMAGE,
     is_available: true,
     is_topping: true,
+    is_main_dish: false,
+    block_today: false,
+    block_today_reason: null,
+    blocked_delivery_dates: [],
+    blocked_delivery_date_reasons: {},
     sort_order: index + 1,
     media: [],
     variants: [
@@ -158,6 +173,11 @@ export const sampleMenuItems: MenuItem[] = [
     thumbnail_url: MENU_IMAGE,
     is_available: true,
     is_topping: false,
+    is_main_dish: false,
+    block_today: false,
+    block_today_reason: null,
+    blocked_delivery_dates: [],
+    blocked_delivery_date_reasons: {},
     sort_order: index + 1,
     media: [],
     variants: [

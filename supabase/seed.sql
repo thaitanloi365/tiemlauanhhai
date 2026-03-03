@@ -17,6 +17,11 @@ insert into menu_items (
 	thumbnail_url,
 	is_available,
 	is_topping,
+	is_main_dish,
+	block_today,
+	block_today_reason,
+	blocked_delivery_dates,
+	blocked_delivery_date_reasons,
 	sort_order
 )
 values
@@ -32,6 +37,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	false,
+	true,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	1
 ),
 (
@@ -46,6 +56,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	false,
+	true,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	2
 ),
 (
@@ -60,6 +75,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	true,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	1
 ),
 (
@@ -74,6 +94,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	true,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	2
 ),
 (
@@ -88,6 +113,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	true,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	3
 ),
 (
@@ -102,6 +132,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	true,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	4
 ),
 (
@@ -116,6 +151,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	true,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	5
 ),
 (
@@ -130,6 +170,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	true,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	6
 ),
 (
@@ -144,6 +189,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	true,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	7
 ),
 (
@@ -158,6 +208,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	true,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	8
 ),
 (
@@ -172,6 +227,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	true,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	9
 ),
 (
@@ -186,6 +246,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	false,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	1
 ),
 (
@@ -200,6 +265,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	false,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	2
 ),
 (
@@ -214,6 +284,11 @@ values
 	'/images/menu/menu.jpeg',
 	true,
 	false,
+	false,
+	false,
+	null,
+	'{}'::date[],
+	'{}'::jsonb,
 	3
 )
 on conflict (id) do update
@@ -228,6 +303,11 @@ set
 	thumbnail_url = excluded.thumbnail_url,
 	is_available = excluded.is_available,
 	is_topping = excluded.is_topping,
+	is_main_dish = excluded.is_main_dish,
+	block_today = excluded.block_today,
+	block_today_reason = excluded.block_today_reason,
+	blocked_delivery_dates = excluded.blocked_delivery_dates,
+	blocked_delivery_date_reasons = excluded.blocked_delivery_date_reasons,
 	sort_order = excluded.sort_order;
 
 insert into menu_variants (id, menu_item_id, name, price, serves_min, serves_max, is_default)

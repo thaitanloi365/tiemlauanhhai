@@ -45,6 +45,7 @@ type Props = {
   onChange: (value: OrderFormModel) => void;
   dateOptions: { value: string; label: string }[];
   slotOptions: { value: string; label: string }[];
+  disabledDateReasons?: Record<string, string>;
   submitting?: boolean;
   invalidFields?: string[];
 };
@@ -57,6 +58,7 @@ export function OrderForm({
   onChange,
   dateOptions,
   slotOptions,
+  disabledDateReasons = {},
   submitting = false,
   invalidFields = [],
 }: Props) {
@@ -100,6 +102,13 @@ export function OrderForm({
   const isInvalid = (field: string) => invalidFields.includes(field);
   const inputClass = (field: string) =>
     `${baseInputClass} ${isInvalid(field) ? 'border-destructive' : 'border-input'}`;
+  const blockedDateEntries = Object.entries(disabledDateReasons);
+  const blockedDateDetails = dateOptions
+    .filter((option) => disabledDateReasons[option.value])
+    .map((option) => ({
+      label: option.label,
+      reason: disabledDateReasons[option.value],
+    }));
 
   const setField = <K extends keyof OrderFormModel>(
     key: K,
@@ -129,12 +138,28 @@ export function OrderForm({
               <SelectContent>
                 <SelectItem value="none">Chọn ngày nhận món</SelectItem>
                 {dateOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    disabled={Boolean(disabledDateReasons[option.value])}
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {blockedDateEntries.length > 0 ? (
+              <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                <p className="font-medium">Ngày giao đang bị chặn:</p>
+                <ul className="mt-1 space-y-1">
+                  {blockedDateDetails.map((entry) => (
+                    <li key={entry.label}>
+                      {entry.label}: {entry.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
           <div className="text-sm">
             <Label className="mb-1 block">Khung giờ nhận món *</Label>

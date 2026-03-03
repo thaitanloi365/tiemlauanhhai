@@ -24,6 +24,11 @@ type MenuItem = {
   thumbnail_url: string | null;
   is_available: boolean;
   is_topping: boolean;
+  is_main_dish: boolean;
+  block_today: boolean;
+  block_today_reason: string | null;
+  blocked_delivery_dates: string[];
+  blocked_delivery_date_reasons: Record<string, string> | null;
   description?: string | null;
   ingredients?: string | null;
   note?: string | null;
@@ -110,6 +115,11 @@ export default function AdminMenuPage() {
           thumbnailUrl: item.thumbnail_url ?? DEFAULT_MENU_IMAGE,
           isAvailable: !item.is_available,
           isTopping: item.is_topping,
+          isMainDish: item.is_main_dish,
+          blockToday: item.block_today,
+          blockTodayReason: item.block_today_reason,
+          blockedDeliveryDates: item.blocked_delivery_dates ?? [],
+          blockedDeliveryDateReasons: item.blocked_delivery_date_reasons ?? {},
           sortOrder: item.sort_order ?? 0,
           variants: (item.variants ?? []).map((variant, index) => ({
             name: variant.name,
@@ -252,6 +262,16 @@ export default function AdminMenuPage() {
                       >
                         {item.is_available ? 'Đang bán' : 'Đang ẩn'}
                       </span>
+                      {item.is_main_dish ? (
+                        <span className="rounded-full bg-primary/10 px-2 py-1 text-primary">
+                          Món chính
+                        </span>
+                      ) : null}
+                      {item.block_today ? (
+                        <span className="rounded-full bg-amber-100 px-2 py-1 text-amber-700">
+                          Chặn hôm nay
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                 </div>

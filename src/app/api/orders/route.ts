@@ -23,6 +23,17 @@ const SCHEDULED_SLOTS = {
   '18:00-20:00': { startHour: 18, endHour: 20 },
 } as const;
 
+type MenuRuleItem = {
+  id: string;
+  name: string;
+  block_today: boolean;
+  block_today_reason?: string | null;
+  blocked_delivery_dates: string[];
+  blocked_delivery_date_reasons?: Record<string, string> | null;
+  is_main_dish?: boolean;
+  category_id?: string;
+};
+
 function toVietnamClock(now: Date) {
   return new Date(now.getTime() + 7 * 60 * 60 * 1000);
 }
@@ -127,6 +138,44 @@ function phoneRateLimitMessage() {
   return 'Số điện thoại này có quá nhiều đơn đang xử lý. Vui lòng thử lại sau.';
 }
 
+function getVietnamDateValue(now: Date) {
+  const vnNow = toVietnamClock(now);
+  const year = vnNow.getUTCFullYear();
+  const month = String(vnNow.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(vnNow.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getDateBlockedMenuItems(
+  scheduledDate: string,
+  menuItems: MenuRuleItem[],
+  now: Date = new Date(),
+) {
+  const todayDateValue = getVietnamDateValue(now);
+  return menuItems
+    .map((menuItem) => {
+      if (menuItem.block_today && scheduledDate === todayDateValue) {
+        return {
+          ...menuItem,
+          active_reason:
+            menuItem.block_today_reason?.trim() ||
+            `Món "${menuItem.name}" đang tạm ngưng giao hôm nay.`,
+        };
+      }
+      if (menuItem.blocked_delivery_dates.includes(scheduledDate)) {
+        const reasonByDate = menuItem.blocked_delivery_date_reasons ?? {};
+        return {
+          ...menuItem,
+          active_reason:
+            reasonByDate[scheduledDate]?.trim() ||
+            `Món "${menuItem.name}" không giao trong ngày đã chọn.`,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean) as Array<MenuRuleItem & { active_reason: string }>;
+}
+
 function countRecentActiveOrdersByPhoneMock(phone: string) {
   const now = Date.now();
   return mockDb.getAllOrders().filter((order) => {
@@ -225,15 +274,35 @@ export async function POST(request: NextRequest) {
         item.variants.map((variant) => [variant.id, item]),
       ),
     );
-    const hasLauItem = body.items.some((item) => {
+    const hasMainDish = body.items.some((item) => {
       const menuItem = itemByVariantId.get(item.variantId);
-      return menuItem
-        ? categoryById.get(menuItem.category_id) === 'lau'
-        : false;
+      if (!menuItem) return false;
+      if (menuItem.is_main_dish) return true;
+      return categoryById.get(menuItem.category_id) === 'lau';
     });
-    if (!hasLauItem) {
+    if (!hasMainDish) {
       return NextResponse.json(
         { message: 'Vui lòng chọn ít nhất 1 món lẩu cho đơn hàng.' },
+        { status: 400 },
+      );
+    }
+
+    const menuItemsInOrder = Array.from(
+      new Set(
+        body.items
+          .map((item) => itemByVariantId.get(item.variantId))
+          .filter(Boolean) as MenuRuleItem[],
+      ),
+    );
+    const blockedMenuItems = getDateBlockedMenuItems(
+      body.scheduledDate,
+      menuItemsInOrder,
+    );
+    if (blockedMenuItems.length > 0) {
+      return NextResponse.json(
+        {
+          message: blockedMenuItems.map((item) => item.active_reason).join(' '),
+        },
         { status: 400 },
       );
     }
@@ -309,7 +378,9 @@ export async function POST(request: NextRequest) {
   ];
   const { data: menuItems, error: menuItemsError } = await supabase
     .from('menu_items')
-    .select('id,category_id')
+    .select(
+      'id,name,category_id,is_main_dish,block_today,block_today_reason,blocked_delivery_dates,blocked_delivery_date_reasons',
+    )
     .in('id', menuItemIds);
   if (menuItemsError)
     return NextResponse.json(
@@ -341,16 +412,61 @@ export async function POST(request: NextRequest) {
   const itemById = new Map(
     (menuItems ?? []).map((item) => [
       item.id as string,
-      item.category_id as string,
+      {
+        categoryId: item.category_id as string,
+        isMainDish: Boolean(item.is_main_dish),
+        name: item.name as string,
+        blockToday: Boolean(item.block_today),
+        blockTodayReason:
+          typeof item.block_today_reason === 'string'
+            ? item.block_today_reason
+            : null,
+        blockedDeliveryDates: ((item.blocked_delivery_dates ?? []) as string[]).map(
+          (entry) => String(entry),
+        ),
+        blockedDeliveryDateReasons:
+          item.blocked_delivery_date_reasons &&
+          typeof item.blocked_delivery_date_reasons === 'object' &&
+          !Array.isArray(item.blocked_delivery_date_reasons)
+            ? (item.blocked_delivery_date_reasons as Record<string, string>)
+            : {},
+      },
     ]),
   );
-  const hasLauItem = (variants ?? []).some((variant) => {
-    const categoryId = itemById.get(variant.menu_item_id as string);
-    return categoryId ? categoryById.get(categoryId) === 'lau' : false;
+  const hasMainDish = (variants ?? []).some((variant) => {
+    const menuItem = itemById.get(variant.menu_item_id as string);
+    if (!menuItem) return false;
+    if (menuItem.isMainDish) return true;
+    return categoryById.get(menuItem.categoryId) === 'lau';
   });
-  if (!hasLauItem) {
+  if (!hasMainDish) {
     return NextResponse.json(
       { message: 'Vui lòng chọn ít nhất 1 món lẩu cho đơn hàng.' },
+      { status: 400 },
+    );
+  }
+
+  const menuItemsInOrder: MenuRuleItem[] = Array.from(itemById.entries()).map(
+    ([id, item]) => ({
+      id,
+      name: item.name,
+      block_today: item.blockToday,
+      block_today_reason: item.blockTodayReason,
+      blocked_delivery_dates: item.blockedDeliveryDates,
+      blocked_delivery_date_reasons: item.blockedDeliveryDateReasons,
+      is_main_dish: item.isMainDish,
+      category_id: item.categoryId,
+    }),
+  );
+  const blockedMenuItems = getDateBlockedMenuItems(
+    body.scheduledDate,
+    menuItemsInOrder,
+  );
+  if (blockedMenuItems.length > 0) {
+    return NextResponse.json(
+      {
+        message: blockedMenuItems.map((item) => item.active_reason).join(' '),
+      },
       { status: 400 },
     );
   }

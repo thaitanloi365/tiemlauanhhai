@@ -15,6 +15,34 @@ type VariantPayload = {
   is_default: boolean;
 };
 
+function normalizeBlockedDeliveryDates(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter((entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry));
+}
+
+function normalizeOptionalText(input: unknown): string | null {
+  if (typeof input !== 'string') return null;
+  const value = input.trim();
+  return value.length > 0 ? value : null;
+}
+
+function normalizeBlockedDeliveryDateReasons(
+  input: unknown,
+): Record<string, string> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const result: Record<string, string> = {};
+  for (const [date, reason] of Object.entries(input as Record<string, unknown>)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    if (typeof reason !== 'string') continue;
+    const trimmed = reason.trim();
+    if (!trimmed) continue;
+    result[date] = trimmed;
+  }
+  return result;
+}
+
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
@@ -125,6 +153,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       thumbnail_url: body.thumbnailUrl,
       is_available: body.isAvailable,
       is_topping: body.isTopping,
+      is_main_dish: Boolean(body.isMainDish),
+      block_today: Boolean(body.blockToday),
+      block_today_reason: normalizeOptionalText(body.blockTodayReason),
+      blocked_delivery_dates: normalizeBlockedDeliveryDates(
+        body.blockedDeliveryDates,
+      ),
+      blocked_delivery_date_reasons: normalizeBlockedDeliveryDateReasons(
+        body.blockedDeliveryDateReasons,
+      ),
       sort_order: body.sortOrder,
     })
     .eq('id', params.id);

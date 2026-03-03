@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -47,6 +47,15 @@ const EMPTY_FORM: OrderFormModel = {
   scheduledSlot: '',
 };
 
+type MenuRuleItem = {
+  id: string;
+  name: string;
+  block_today?: boolean;
+  block_today_reason?: string | null;
+  blocked_delivery_dates?: string[] | null;
+  blocked_delivery_date_reasons?: Record<string, string> | null;
+};
+
 export default function CartPage() {
   const router = useRouter();
   const lines = useCartStore((state) => state.lines);
@@ -57,7 +66,75 @@ export default function CartPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [disabledDateReasons, setDisabledDateReasons] = useState<
+    Record<string, string>
+  >({});
   const dateOptions = useMemo(() => nextSevenDays(), []);
+  const todayDateValue = dateOptions[0]?.value ?? '';
+
+  useEffect(() => {
+    let active = true;
+    async function loadDisabledDates() {
+      if (lines.length === 0) {
+        if (active) setDisabledDateReasons({});
+        return;
+      }
+      try {
+        const response = await fetch('/api/menu', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok) return;
+        const menuItems = (data?.menuItems ?? []) as MenuRuleItem[];
+        const menuItemById = new Map(menuItems.map((item) => [item.id, item]));
+        const selectedDates = new Set(dateOptions.map((option) => option.value));
+        const reasonsByDate = new Map<string, Set<string>>();
+
+        for (const line of lines) {
+          const menuItem = menuItemById.get(line.itemId);
+          if (!menuItem) continue;
+          const itemLabel = menuItem.name;
+          const todayReason =
+            menuItem.block_today_reason?.trim() ||
+            `Món "${itemLabel}" đang tạm ngưng giao hôm nay.`;
+          if (menuItem.block_today && todayDateValue) {
+            const reasons = reasonsByDate.get(todayDateValue) ?? new Set<string>();
+            reasons.add(todayReason);
+            reasonsByDate.set(todayDateValue, reasons);
+          }
+          for (const blockedDate of menuItem.blocked_delivery_dates ?? []) {
+            if (!selectedDates.has(blockedDate)) continue;
+            const reasonForDate = menuItem.blocked_delivery_date_reasons?.[
+              blockedDate
+            ]?.trim();
+            const reasons = reasonsByDate.get(blockedDate) ?? new Set<string>();
+            reasons.add(
+              reasonForDate || `Món "${itemLabel}" không giao trong ngày này.`,
+            );
+            reasonsByDate.set(blockedDate, reasons);
+          }
+        }
+
+        const nextReasons: Record<string, string> = {};
+        for (const [dateValue, reasons] of reasonsByDate.entries()) {
+          nextReasons[dateValue] = Array.from(reasons).join(' ');
+        }
+        if (active) setDisabledDateReasons(nextReasons);
+      } catch {
+        if (active) setDisabledDateReasons({});
+      }
+    }
+    loadDisabledDates();
+    return () => {
+      active = false;
+    };
+  }, [dateOptions, lines, todayDateValue]);
+
+  useEffect(() => {
+    if (!form.scheduledDate) return;
+    const blockedReason = disabledDateReasons[form.scheduledDate];
+    if (!blockedReason) return;
+    setForm((current) => ({ ...current, scheduledDate: '', scheduledSlot: '' }));
+    setSubmitError(blockedReason);
+  }, [disabledDateReasons, form.scheduledDate]);
 
   const validateBeforeConfirm = () => {
     const required: Array<keyof OrderFormModel> = [
@@ -78,6 +155,11 @@ export default function CartPage() {
     }
     if (failed.length > 0) {
       setSubmitError('Vui lòng nhập đầy đủ thông tin bắt buộc.');
+      return false;
+    }
+    const blockedReason = disabledDateReasons[form.scheduledDate];
+    if (blockedReason) {
+      setSubmitError(blockedReason);
       return false;
     }
     setSubmitError('');
@@ -142,6 +224,7 @@ export default function CartPage() {
               onChange={setForm}
               dateOptions={dateOptions}
               slotOptions={SLOT_OPTIONS}
+              disabledDateReasons={disabledDateReasons}
               submitting={submitting}
               invalidFields={invalidFields}
             />

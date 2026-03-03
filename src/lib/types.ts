@@ -38,6 +38,11 @@ export interface MenuItem {
   thumbnail_url: string | null;
   is_available: boolean;
   is_topping: boolean;
+  is_main_dish: boolean;
+  block_today: boolean;
+  block_today_reason: string | null;
+  blocked_delivery_dates: string[];
+  blocked_delivery_date_reasons: Record<string, string>;
   sort_order: number;
   variants: MenuVariant[];
   media: MenuMedia[];

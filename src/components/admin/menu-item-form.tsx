@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -32,6 +32,10 @@ type MediaEntry = {
   url: string;
   altText?: string | null;
 };
+type BlockedDateRule = {
+  date: string;
+  reason: string;
+};
 type MenuVariant = {
   id?: string;
   name: string;
@@ -50,6 +54,11 @@ type MenuItemInput = {
   preparation_time_minutes?: number | null;
   thumbnail_url?: string | null;
   is_topping?: boolean;
+  is_main_dish?: boolean;
+  block_today?: boolean;
+  block_today_reason?: string | null;
+  blocked_delivery_dates?: string[] | null;
+  blocked_delivery_date_reasons?: Record<string, string> | null;
   sort_order?: number;
   variants?: MenuVariant[];
   media?: { type: 'image' | 'video'; url: string; alt_text?: string | null }[];
@@ -66,6 +75,19 @@ type Props = {
 const EMPTY_VARIANT = { name: '', price: '' };
 const DEFAULT_MENU_IMAGE = '/logo.png';
 
+function toBlockedDateRules(
+  dates: string[] | null | undefined,
+  reasonMap: Record<string, string> | null | undefined,
+): BlockedDateRule[] {
+  const uniqueDates = Array.from(
+    new Set((dates ?? []).filter((entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry))),
+  );
+  return uniqueDates.map((date) => ({
+    date,
+    reason: reasonMap?.[date]?.trim() ?? '',
+  }));
+}
+
 const variantFormSchema = z.object({
   name: z.string().trim().min(1, 'Tên biến thể không được để trống.'),
   price: z
@@ -81,6 +103,13 @@ const mediaFormSchema = z.object({
   type: z.enum(['image', 'video']),
   url: z.string().trim().min(1),
   altText: z.string().optional().nullable(),
+});
+const blockedDateRuleSchema = z.object({
+  date: z
+    .string()
+    .trim()
+    .refine((entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry), 'Ngày phải có dạng YYYY-MM-DD.'),
+  reason: z.string().trim().min(1, 'Vui lòng nhập lý do chặn ngày này.'),
 });
 
 const menuItemFormSchema = z.object({
@@ -102,6 +131,10 @@ const menuItemFormSchema = z.object({
     ),
   thumbnailUrl: z.string(),
   isTopping: z.boolean(),
+  isMainDish: z.boolean(),
+  blockToday: z.boolean(),
+  blockTodayReason: z.string(),
+  blockedDateRules: z.array(blockedDateRuleSchema),
   sortOrder: z
     .string()
     .refine((value) => Number.isFinite(Number(value)), 'Thứ tự hiển thị không hợp lệ.'),
@@ -141,6 +174,10 @@ export function MenuItemForm({
       preparationTimeMinutes: '',
       thumbnailUrl: DEFAULT_MENU_IMAGE,
       isTopping: false,
+      isMainDish: false,
+      blockToday: false,
+      blockTodayReason: '',
+      blockedDateRules: [],
       sortOrder: '99',
       variants: [{ ...EMPTY_VARIANT }],
       media: [],
@@ -163,6 +200,14 @@ export function MenuItemForm({
     control,
     name: 'media',
   });
+  const {
+    fields: blockedDateRuleFields,
+    append: appendBlockedDateRule,
+    remove: removeBlockedDateRule,
+  } = useFieldArray({
+    control,
+    name: 'blockedDateRules',
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -182,6 +227,13 @@ export function MenuItemForm({
           : '',
       thumbnailUrl: item?.thumbnail_url ?? DEFAULT_MENU_IMAGE,
       isTopping: Boolean(item?.is_topping),
+      isMainDish: Boolean(item?.is_main_dish),
+      blockToday: Boolean(item?.block_today),
+      blockTodayReason: item?.block_today_reason ?? '',
+      blockedDateRules: toBlockedDateRules(
+        item?.blocked_delivery_dates,
+        item?.blocked_delivery_date_reasons,
+      ),
       sortOrder: String(item?.sort_order ?? 99),
       variants: nextVariants.length > 0 ? nextVariants : [{ ...EMPTY_VARIANT }],
       media: (item?.media ?? []).map((entry) => ({
@@ -261,6 +313,13 @@ export function MenuItemForm({
       name: entry.name.trim(),
       price: parseCurrencyInput(entry.price),
     }));
+    const blockedDateMap = new Map<string, string>();
+    for (const entry of values.blockedDateRules) {
+      blockedDateMap.set(entry.date.trim(), entry.reason.trim());
+    }
+    const blockedDeliveryDates = Array.from(blockedDateMap.keys());
+    const blockedDeliveryDateReasons = Object.fromEntries(blockedDateMap.entries());
+
     const payload = {
       name: values.name.trim(),
       categoryId: values.categoryId,
@@ -272,6 +331,11 @@ export function MenuItemForm({
         : null,
       thumbnailUrl: values.thumbnailUrl.trim() || null,
       isTopping: values.isTopping,
+      isMainDish: values.isMainDish,
+      blockToday: values.blockToday,
+      blockTodayReason: values.blockTodayReason.trim() || null,
+      blockedDeliveryDates,
+      blockedDeliveryDateReasons,
       sortOrder: Number(values.sortOrder || 0),
       variants: normalizedVariants.map((entry, index) => ({
         name: entry.name,
@@ -307,6 +371,19 @@ export function MenuItemForm({
     }
   }
   const thumbnailUrl = watch('thumbnailUrl');
+  const blockedDateRules = watch('blockedDateRules');
+  const missingReasonDates = useMemo(
+    () =>
+      (blockedDateRules ?? [])
+        .map((entry) => ({
+          date: entry?.date?.trim() ?? '',
+          reason: entry?.reason?.trim() ?? '',
+        }))
+        .filter((entry) => entry.date && !entry.reason)
+        .map((entry) => entry.date),
+    [blockedDateRules],
+  );
+  const hasRealtimeBlockedDateIssue = missingReasonDates.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -434,6 +511,98 @@ export function MenuItemForm({
               )}
             />
             <Label>Là topping</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Controller
+              control={control}
+              name="isMainDish"
+              render={({ field }) => (
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={(value) => field.onChange(value === true)}
+                />
+              )}
+            />
+            <Label>Là món chính</Label>
+          </div>
+          <div className="flex items-center gap-2 sm:col-span-2">
+            <Controller
+              control={control}
+              name="blockToday"
+              render={({ field }) => (
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={(value) => field.onChange(value === true)}
+                />
+              )}
+            />
+            <Label>Không giao trong hôm nay</Label>
+          </div>
+          <div className="grid gap-1 sm:col-span-2">
+            <Label>Lý do chặn hôm nay</Label>
+            <Input
+              placeholder="Ví dụ: Món này chỉ bán ngày mai do hết nguyên liệu"
+              {...register('blockTodayReason')}
+            />
+          </div>
+          <div className="grid gap-2 sm:col-span-2">
+            <div className="flex items-center justify-between">
+              <Label>Danh sách ngày giao bị chặn</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => appendBlockedDateRule({ date: '', reason: '' })}
+              >
+                Thêm ngày chặn
+              </Button>
+            </div>
+            {blockedDateRuleFields.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Chưa có ngày nào bị chặn.
+              </p>
+            ) : null}
+            <div className="space-y-2">
+              {blockedDateRuleFields.map((field, index) => (
+                <div key={field.id} className="grid gap-2 rounded-md border p-3 sm:grid-cols-[160px,1fr,96px]">
+                  <div>
+                    <Input
+                      type="date"
+                      {...register(`blockedDateRules.${index}.date`)}
+                    />
+                    {errors.blockedDateRules?.[index]?.date?.message ? (
+                      <p className="mt-1 text-xs text-destructive">
+                        {errors.blockedDateRules[index]?.date?.message}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div>
+                    <Input
+                      placeholder="Lý do chặn ngày này"
+                      {...register(`blockedDateRules.${index}.reason`)}
+                    />
+                    {errors.blockedDateRules?.[index]?.reason?.message ? (
+                      <p className="mt-1 text-xs text-destructive">
+                        {errors.blockedDateRules[index]?.reason?.message}
+                      </p>
+                    ) : null}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeBlockedDateRule(index)}
+                  >
+                    Xóa
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {hasRealtimeBlockedDateIssue ? (
+              <p className="text-xs text-destructive">
+                Cần nhập lý do cho các ngày: {missingReasonDates.join(', ')}
+              </p>
+            ) : null}
           </div>
         </form>
 
@@ -579,7 +748,7 @@ export function MenuItemForm({
           <Button
             type="submit"
             form="menu-item-form"
-            disabled={isSubmitting || uploading}
+            disabled={isSubmitting || uploading || hasRealtimeBlockedDateIssue}
           >
             {isSubmitting ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Tạo món'}
           </Button>

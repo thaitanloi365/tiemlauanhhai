@@ -3,10 +3,19 @@
 import { useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { parseAsString, useQueryStates } from 'nuqs';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils/format';
 import {
@@ -67,6 +76,7 @@ export default function AdminPromotionsPage() {
   });
   const [message, setMessage] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const {
     register,
     control,
@@ -117,6 +127,7 @@ export default function AdminPromotionsPage() {
     },
     onSuccess: async () => {
       setMessage('');
+      setModalOpen(false);
       reset(EMPTY_FORM);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'promotions'] });
     },
@@ -138,6 +149,7 @@ export default function AdminPromotionsPage() {
     },
     onSuccess: async () => {
       setMessage('');
+      setModalOpen(false);
       setEditingId(null);
       reset(EMPTY_FORM);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'promotions'] });
@@ -185,6 +197,7 @@ export default function AdminPromotionsPage() {
 
   const startEdit = (promotion: AdminPromotion) => {
     setEditingId(promotion.id);
+    setModalOpen(true);
     reset({
       code: promotion.code,
       type: promotion.type,
@@ -231,108 +244,21 @@ export default function AdminPromotionsPage() {
     toggleActiveMutation.isPending ||
     deletePromotionMutation.isPending;
 
+  const openCreateModal = () => {
+    setEditingId(null);
+    setMessage('');
+    reset(EMPTY_FORM);
+    setModalOpen(true);
+  };
+
   return (
     <div className="container-shell space-y-4">
-      <h1 className="text-3xl font-bold">Quản lý mã khuyến mãi</h1>
-
-      <section className="rounded-xl border border-border bg-card p-4">
-        <h2 className="text-lg font-semibold">
-          {editingId ? `Cập nhật mã ${editingPromotion?.code ?? ''}` : 'Tạo mã mới'}
-        </h2>
-        <form
-          className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3"
-          onSubmit={submitForm}
-          noValidate
-        >
-          <Input
-            placeholder="Mã code"
-            {...register('code')}
-            value={codeValue}
-            disabled={Boolean(editingId)}
-            onChange={(event) => {
-              setValue('code', event.target.value.toUpperCase(), {
-                shouldDirty: true,
-              });
-            }}
-          />
-          <select
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-            {...register('type')}
-            disabled={Boolean(editingId)}
-          >
-            {PROMOTION_TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <Input
-            type="number"
-            min={1}
-            placeholder={typeValue === 'percentage' ? 'Phần trăm giảm (%)' : 'Số tiền giảm'}
-            {...register('discount_value')}
-          />
-          {typeValue === 'percentage' ? (
-            <Input
-              type="number"
-              min={0}
-              placeholder="Giảm tối đa (đ)"
-              {...register('max_discount_amount')}
-            />
-          ) : null}
-          <Input
-            type="number"
-            min={0}
-            placeholder="Đơn tối thiểu (đ)"
-            {...register('min_order_amount')}
-          />
-          <Input
-            type="number"
-            min={1}
-            placeholder="Giới hạn lượt dùng"
-            {...register('max_usage')}
-          />
-          <Input
-            type="datetime-local"
-            {...register('valid_from')}
-          />
-          <Input
-            type="datetime-local"
-            {...register('valid_until')}
-          />
-          <label className="flex items-center gap-2 rounded-md border border-input px-3 text-sm">
-            <input
-              type="checkbox"
-              {...register('is_active')}
-            />
-            Đang hoạt động
-          </label>
-          {Object.keys(errors).length > 0 ? (
-            <p className="text-sm text-destructive">Vui lòng kiểm tra lại dữ liệu nhập.</p>
-          ) : null}
-          <div className="mt-3 flex gap-2 md:col-span-2 lg:col-span-3">
-            <Button type="submit" disabled={isSubmitting || isMutating}>
-              {isSubmitting
-              ? 'Đang lưu...'
-              : editingId
-                ? 'Lưu thay đổi'
-                : 'Tạo mã khuyến mãi'}
-            </Button>
-            {editingId ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setEditingId(null);
-                  reset(EMPTY_FORM);
-                }}
-              >
-                Hủy chỉnh sửa
-              </Button>
-            ) : null}
-          </div>
-        </form>
-      </section>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="text-3xl font-bold">Quản lý mã khuyến mãi</h1>
+        <Button type="button" onClick={openCreateModal}>
+          Tạo mã khuyến mãi
+        </Button>
+      </div>
 
       <section className="rounded-xl border border-border bg-card p-4">
         <div className="grid gap-3 md:grid-cols-2">
@@ -365,6 +291,132 @@ export default function AdminPromotionsPage() {
           {message}
         </div>
       ) : null}
+
+      <Dialog
+        open={modalOpen}
+        onOpenChange={(open) => {
+          if (!open && (isSubmitting || isMutating)) return;
+          setModalOpen(open);
+          if (!open) {
+            setEditingId(null);
+            reset(EMPTY_FORM);
+          }
+        }}
+      >
+        <DialogContent
+          className="max-h-[92vh] max-w-3xl overflow-y-auto"
+          onInteractOutside={(event) => {
+            if (isSubmitting || isMutating) event.preventDefault();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (isSubmitting || isMutating) event.preventDefault();
+          }}
+          showCloseButton={!isSubmitting && !isMutating}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? `Cập nhật mã ${editingPromotion?.code ?? ''}` : 'Tạo mã khuyến mãi mới'}
+            </DialogTitle>
+            <DialogDescription>
+              Thiết lập loại giảm giá, điều kiện đơn tối thiểu, giới hạn lượt dùng và thời gian hiệu lực.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form className="grid gap-3 md:grid-cols-2 lg:grid-cols-3" onSubmit={submitForm} noValidate>
+            <Input
+              placeholder="Mã code"
+              {...register('code')}
+              value={codeValue}
+              disabled={Boolean(editingId)}
+              onChange={(event) => {
+                setValue('code', event.target.value.toUpperCase(), {
+                  shouldDirty: true,
+                });
+              }}
+            />
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              {...register('type')}
+              disabled={Boolean(editingId)}
+            >
+              {PROMOTION_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <Input
+              type="number"
+              min={1}
+              placeholder={typeValue === 'percentage' ? 'Phần trăm giảm (%)' : 'Số tiền giảm'}
+              {...register('discount_value')}
+            />
+            {typeValue === 'percentage' ? (
+              <Input
+                type="number"
+                min={0}
+                placeholder="Giảm tối đa (đ)"
+                {...register('max_discount_amount')}
+              />
+            ) : null}
+            <Input
+              type="number"
+              min={0}
+              placeholder="Đơn tối thiểu (đ)"
+              {...register('min_order_amount')}
+            />
+            <Input
+              type="number"
+              min={1}
+              placeholder="Giới hạn lượt dùng"
+              {...register('max_usage')}
+            />
+            <Input type="datetime-local" {...register('valid_from')} />
+            <Input type="datetime-local" {...register('valid_until')} />
+            <label className="flex items-center gap-2 rounded-md border border-input px-3 text-sm">
+              <Controller
+                name="is_active"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    checked={Boolean(field.value)}
+                    onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                  />
+                )}
+              />
+              Đang hoạt động
+            </label>
+
+            {Object.keys(errors).length > 0 ? (
+              <p className="text-sm text-destructive md:col-span-2 lg:col-span-3">
+                Vui lòng kiểm tra lại dữ liệu nhập.
+              </p>
+            ) : null}
+
+            <DialogFooter className="md:col-span-2 lg:col-span-3">
+              <Button type="submit" disabled={isSubmitting || isMutating}>
+                {isSubmitting
+                  ? 'Đang lưu...'
+                  : editingId
+                    ? 'Lưu thay đổi'
+                    : 'Tạo mã khuyến mãi'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSubmitting || isMutating}
+                onClick={() => {
+                  setModalOpen(false);
+                  setEditingId(null);
+                  reset(EMPTY_FORM);
+                }}
+              >
+                Hủy
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {promotionsQuery.isPending ? (
         <div className="rounded-md border p-4 text-sm text-muted-foreground">

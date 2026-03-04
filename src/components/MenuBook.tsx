@@ -5,14 +5,34 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function MenuBook() {
-  const pages = useMemo(
-    () =>
-      Array.from({ length: 10 }, (_, index) => ({
-        number: index + 1,
+  // const pages = useMemo(
+  //   () =>
+  //     Array.from({ length: 10 }, (_, index) => ({
+  //       number: index + 1,
+  //       image: '/logo.png',
+  //     })),
+  //   [],
+  // );
+  const pages = useMemo(() => {
+    return [
+      {
+        number: 1,
         image: '/logo.png',
-      })),
-    [],
-  );
+      },
+      {
+        number: 2,
+        image: '/menu-1.jpg',
+      },
+      {
+        number: 3,
+        image: '/menu-1.jpg',
+      },
+      {
+        number: 4,
+        image: '/menu-2.jpg',
+      },
+    ];
+  }, []);
   const [spread, setSpread] = useState(0);
   const [direction, setDirection] = useState<'next' | 'prev' | null>(null);
   const totalSpreads = Math.ceil(pages.length / 2);

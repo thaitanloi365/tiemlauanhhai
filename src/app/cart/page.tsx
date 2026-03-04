@@ -26,7 +26,7 @@ function nextSevenDays() {
     date.setDate(date.getDate() + index);
     const value = date.toISOString().slice(0, 10);
     const label = date.toLocaleDateString('vi-VN', {
-      weekday: 'short',
+      weekday: 'long',
       day: '2-digit',
       month: '2-digit',
     });

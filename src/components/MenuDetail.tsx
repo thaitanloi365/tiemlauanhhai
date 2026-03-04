@@ -96,7 +96,7 @@ export function MenuDetail({ item }: Props) {
                 </p>
               ) : null}
               {item.note ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm">
                   Lưu ý từ nhà hàng: {item.note}
                 </p>
               ) : null}

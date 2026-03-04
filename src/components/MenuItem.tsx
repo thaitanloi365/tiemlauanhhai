@@ -29,7 +29,9 @@ export function MenuItem({ item, detailMode = 'page' }: Props) {
   const openVisibleCartDrawer = () => {
     if (typeof window === 'undefined') return;
     const triggers = Array.from(
-      document.querySelectorAll<HTMLButtonElement>('[data-cart-drawer-trigger]'),
+      document.querySelectorAll<HTMLButtonElement>(
+        '[data-cart-drawer-trigger]',
+      ),
     );
     const visibleTrigger = triggers.find((trigger) => {
       const styles = window.getComputedStyle(trigger);
@@ -88,7 +90,7 @@ export function MenuItem({ item, detailMode = 'page' }: Props) {
             Nguyên liệu: {item.ingredients}
           </p>
         ) : null}
-        {(item.preparation_time_minutes || item.note) ? (
+        {item.preparation_time_minutes || item.note ? (
           <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
             <h3 className="inline-flex rounded-md bg-primary/10 px-2 py-1 text-sm font-semibold uppercase tracking-wide text-primary">
               Thông tin quan trọng
@@ -100,9 +102,7 @@ export function MenuItem({ item, detailMode = 'page' }: Props) {
               </p>
             ) : null}
             {item.note ? (
-              <p className="text-sm text-muted-foreground">
-                Lưu ý từ nhà hàng: {item.note}
-              </p>
+              <p className="text-sm">Lưu ý từ nhà hàng: {item.note}</p>
             ) : null}
           </div>
         ) : null}

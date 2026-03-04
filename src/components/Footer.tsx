@@ -28,6 +28,15 @@ export function Footer() {
           <p>Địa chỉ: Cập nhật sau</p>
           <p>Giờ mở cửa: 10:00 - 22:00</p>
           <p>Hotline: 0900 000 000</p>
+          <p>
+            Email hỗ trợ:{' '}
+            <a
+              href="mailto:hotro@lauah.com"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              hotro@lauah.com
+            </a>
+          </p>
         </div>
         <div className="space-y-2 text-sm text-muted-foreground">
           <p className="font-semibold text-foreground">Kết nối</p>

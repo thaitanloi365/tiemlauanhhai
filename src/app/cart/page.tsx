@@ -49,6 +49,8 @@ type MenuRuleItem = {
   blocked_delivery_date_reasons?: Record<string, string> | null;
 };
 
+type PromotionMessageTone = 'neutral' | 'error' | 'success';
+
 export default function CartPage() {
   const router = useRouter();
   const form = useOrderForm();
@@ -64,6 +66,8 @@ export default function CartPage() {
   const [promotionBaseAmount, setPromotionBaseAmount] = useState(0);
   const [promotionBaseLineCount, setPromotionBaseLineCount] = useState(0);
   const [promotionMessage, setPromotionMessage] = useState('');
+  const [promotionMessageTone, setPromotionMessageTone] =
+    useState<PromotionMessageTone>('neutral');
   const dateOptions = useMemo(() => nextSevenDays(), []);
   const todayDateValue = dateOptions[0]?.value ?? '';
   const scheduledDate = form.watch('scheduled_date');
@@ -228,22 +232,32 @@ export default function CartPage() {
   };
 
   const applyPromotionCode = async () => {
+    const setPromotionFeedback = (
+      message: string,
+      tone: PromotionMessageTone = 'neutral',
+    ) => {
+      setPromotionMessage(message);
+      setPromotionMessageTone(tone);
+    };
     const nextCode = promotionCode.trim().toUpperCase();
     if (!nextCode) {
-      setPromotionMessage('Vui lòng nhập mã khuyến mãi.');
+      setPromotionFeedback('Vui lòng nhập mã khuyến mãi.', 'error');
       setAppliedPromotionCode('');
       setDiscountAmount(0);
       return;
     }
     if (totalAmount <= 0) {
-      setPromotionMessage('Giỏ hàng đang trống.');
+      setPromotionFeedback('Giỏ hàng đang trống.', 'error');
       return;
     }
     if (!hasMainDish) {
-      setPromotionMessage('Cần có món chính trong giỏ hàng để áp dụng mã khuyến mãi.');
+      setPromotionFeedback(
+        'Cần có món chính trong giỏ hàng để áp dụng mã khuyến mãi.',
+        'error',
+      );
       return;
     }
-    setPromotionMessage('');
+    setPromotionFeedback('');
     try {
       const data = await applyPromotionMutation.mutateAsync(nextCode);
       setPromotionCode(nextCode);
@@ -251,13 +265,14 @@ export default function CartPage() {
       setDiscountAmount(Number(data.discountAmount) || 0);
       setPromotionBaseAmount(totalAmount);
       setPromotionBaseLineCount(lines.length);
-      setPromotionMessage(
+      setPromotionFeedback(
         data?.message || 'Áp dụng mã khuyến mãi thành công.',
+        'success',
       );
     } catch {
       setAppliedPromotionCode('');
       setDiscountAmount(0);
-      setPromotionMessage('Không thể kết nối tới máy chủ.');
+      setPromotionFeedback('Không thể kết nối tới máy chủ.', 'error');
     }
   };
 
@@ -289,7 +304,7 @@ export default function CartPage() {
                 <Input
                   value={promotionCode}
                   onChange={(event) => setPromotionCode(event.target.value)}
-                  placeholder="Nhập mã (VD: KHAITRUONG20)"
+                  placeholder="Nhập mã (VD: ANHHAI20)"
                   className="uppercase"
                   disabled={!hasMainDish}
                 />
@@ -308,7 +323,17 @@ export default function CartPage() {
                 </p>
               ) : null}
               {promotionMessage ? (
-                <p className="mt-2 text-xs text-muted-foreground">{promotionMessage}</p>
+                <p
+                  className={`mt-2 text-xs ${
+                    promotionMessageTone === 'error'
+                      ? 'text-destructive'
+                      : promotionMessageTone === 'success'
+                        ? 'text-primary'
+                        : 'text-muted-foreground'
+                  }`}
+                >
+                  {promotionMessage}
+                </p>
               ) : null}
               {activeDiscountAmount > 0 ? (
                 <p className="mt-1 text-sm text-primary">

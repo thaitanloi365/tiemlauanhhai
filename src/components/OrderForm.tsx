@@ -224,6 +224,7 @@ export function OrderForm({
             <Label className="mb-1 block">Họ tên *</Label>
             <Input
               className={inputClass('customer_name')}
+              placeholder="Ví dụ: Nguyễn Văn A"
               {...register('customer_name')}
             />
           </div>
@@ -237,6 +238,7 @@ export function OrderForm({
                   value={field.value}
                   onChange={field.onChange}
                   invalid={isInvalid('phone')}
+                  placeholder="Ví dụ: 0901 234 567"
                 />
               )}
             />
@@ -248,6 +250,7 @@ export function OrderForm({
             <Input
               type="email"
               className={inputClass('email')}
+              placeholder="Ví dụ: hotro@lauah.com"
               value={values.email ?? ''}
               onChange={(event) =>
                 setValue('email', event.target.value.trim() || null, {
@@ -346,6 +349,7 @@ export function OrderForm({
             <Label className="mb-1 block">Số nhà, tên đường *</Label>
             <Input
               className={inputClass('address')}
+              placeholder="Ví dụ: 123 Đường Trần Hưng Đạo"
               {...register('address')}
             />
           </div>
@@ -362,6 +366,7 @@ export function OrderForm({
           <Label className="mb-1 block">Ghi chú</Label>
           <Textarea
             className={`${baseInputClass} border-input h-24`}
+            placeholder="Ví dụ: Ít cay, giao trước 19:00"
             {...register('note')}
           />
         </div>

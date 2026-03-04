@@ -27,7 +27,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         </NuqsAdapter>
         <Toaster
           position="top-center"
-          richColors
           toastOptions={{
             classNames: {
               toast:

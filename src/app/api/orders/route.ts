@@ -1,27 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
 import { mockDb } from '@/lib/server/mock-db';
-import { sampleCategories, sampleMenuItems } from '@/lib/sample-data';
-import { orderSchema } from '@/lib/utils/validation';
-import type { Order, OrderItem } from '@/lib/types';
+import { sampleMenuItems } from '@/lib/sample-data';
+import {
+  ORDER_ACTIVE_STATUSES,
+  ORDER_LIMITS,
+  ORDER_TIME,
+  SCHEDULED_SLOTS,
+  type ScheduledSlotValue,
+} from '@/lib/constants/order';
+import {
+  APP_TIMEZONE,
+  DATE_ONLY_FORMAT,
+  type DateInput,
+  diffDaysFromDateOnly,
+  formatDateOnlyInTz,
+  now as dayjsNow,
+  parseDateOnlyInTz,
+  parseDateTimeInTz,
+  parseInTz,
+  toIso,
+} from '@/lib/date';
+import { orderSchema } from '@/lib/schemas';
+import {
+  getPromotionByCode,
+  validatePromotionForOrder,
+} from '@/lib/server/promotion';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const PHONE_WINDOW_MS = 60 * 60 * 1000;
-const PHONE_ACTIVE_ORDER_LIMIT = 3;
-const ACTIVE_ORDER_STATUSES: Order['status'][] = [
-  'pending',
-  'confirmed',
-  'preparing',
-  'shipping',
-];
-const ACTIVE_ORDER_STATUS_SET = new Set<Order['status']>(ACTIVE_ORDER_STATUSES);
-const SCHEDULED_SLOTS = {
-  '10:00-12:00': { startHour: 10, endHour: 12 },
-  '12:00-14:00': { startHour: 12, endHour: 14 },
-  '14:00-16:00': { startHour: 14, endHour: 16 },
-  '16:00-18:00': { startHour: 16, endHour: 18 },
-  '18:00-20:00': { startHour: 18, endHour: 20 },
-} as const;
+const ACTIVE_ORDER_STATUS_SET = new Set<AppTypes.Order['status']>(
+  ORDER_ACTIVE_STATUSES,
+);
 
 type MenuRuleItem = {
   id: string;
@@ -34,54 +42,28 @@ type MenuRuleItem = {
   category_id?: string;
 };
 
-function toVietnamClock(now: Date) {
-  return new Date(now.getTime() + 7 * 60 * 60 * 1000);
-}
-
-function getCutoffHour(vnDate: Date) {
-  const dayOfWeek = vnDate.getUTCDay();
+function getCutoffHour(scheduledDate: string) {
+  const dayOfWeek = parseDateOnlyInTz(scheduledDate).day();
   return dayOfWeek === 0 || dayOfWeek === 6 ? 16 : 14;
-}
-
-function parseVietnamDateString(value: string) {
-  const [yearText, monthText, dayText] = value.split('-');
-  const year = Number(yearText);
-  const month = Number(monthText);
-  const day = Number(dayText);
-  if (!year || !month || !day) return null;
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  if (
-    parsed.getUTCFullYear() !== year ||
-    parsed.getUTCMonth() !== month - 1 ||
-    parsed.getUTCDate() !== day
-  ) {
-    return null;
-  }
-  return parsed;
 }
 
 function validateScheduledDateSlot(
   scheduledDate: string,
-  scheduledSlot: keyof typeof SCHEDULED_SLOTS,
-  now: Date = new Date(),
+  scheduledSlot: ScheduledSlotValue,
+  now: DateInput = dayjsNow().valueOf(),
 ): { ok: true; scheduledFor: string } | { ok: false; message: string } {
-  const parsedDate = parseVietnamDateString(scheduledDate);
-  if (!parsedDate) {
+  const parsedDate = parseDateOnlyInTz(scheduledDate);
+  if (!parsedDate.isValid()) {
     return { ok: false, message: 'Ngày nhận món không hợp lệ.' };
   }
-  const year = parsedDate.getUTCFullYear();
-  const month = parsedDate.getUTCMonth() + 1;
-  const day = parsedDate.getUTCDate();
 
-  const vnNow = toVietnamClock(now);
-  const todayInVietnam = Date.UTC(
-    vnNow.getUTCFullYear(),
-    vnNow.getUTCMonth(),
-    vnNow.getUTCDate(),
+  const vnNow = parseInTz(now, APP_TIMEZONE);
+  const diffDays = diffDaysFromDateOnly(
+    vnNow.format(DATE_ONLY_FORMAT),
+    scheduledDate,
+    APP_TIMEZONE,
   );
-  const targetInVietnam = Date.UTC(year, month - 1, day);
-  const diffDays = Math.round((targetInVietnam - todayInVietnam) / DAY_MS);
-  const cutoffHour = getCutoffHour(parsedDate);
+  const cutoffHour = getCutoffHour(scheduledDate);
   const slot = SCHEDULED_SLOTS[scheduledSlot];
 
   if (!slot) {
@@ -95,8 +77,8 @@ function validateScheduledDateSlot(
     return { ok: false, message: 'Chi cho phep dat truoc toi da 7 ngay.' };
   }
   if (diffDays === 0) {
-    const currentHour = vnNow.getUTCHours();
-    const currentMinuteOfDay = currentHour * 60 + vnNow.getUTCMinutes();
+    const currentHour = vnNow.hour();
+    const currentMinuteOfDay = currentHour * 60 + vnNow.minute();
     const slotStartMinute = slot.startHour * 60;
     if (currentHour >= cutoffHour) {
       const cutoffLabel = cutoffHour === 16 ? '16:00' : '14:00';
@@ -123,7 +105,11 @@ function validateScheduledDateSlot(
   const startHourText = String(slot.startHour).padStart(2, '0');
   return {
     ok: true,
-    scheduledFor: `${scheduledDate}T${startHourText}:00:00+07:00`,
+    scheduledFor: parseDateTimeInTz(
+      `${scheduledDate} ${startHourText}:00:00`,
+      'YYYY-MM-DD HH:mm:ss',
+      APP_TIMEZONE,
+    ).format(),
   };
 }
 
@@ -138,18 +124,14 @@ function phoneRateLimitMessage() {
   return 'Số điện thoại này có quá nhiều đơn đang xử lý. Vui lòng thử lại sau.';
 }
 
-function getVietnamDateValue(now: Date) {
-  const vnNow = toVietnamClock(now);
-  const year = vnNow.getUTCFullYear();
-  const month = String(vnNow.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(vnNow.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function getVietnamDateValue(now: DateInput) {
+  return formatDateOnlyInTz(now, APP_TIMEZONE);
 }
 
 function getDateBlockedMenuItems(
   scheduledDate: string,
   menuItems: MenuRuleItem[],
-  now: Date = new Date(),
+  now: DateInput = dayjsNow().valueOf(),
 ) {
   const todayDateValue = getVietnamDateValue(now);
   return menuItems
@@ -178,30 +160,59 @@ function getDateBlockedMenuItems(
 
 function isMainDishMenuItem(
   menuItem: MenuRuleItem,
-  categoryById: Map<string, string>,
 ) {
-  if (menuItem.is_main_dish) return true;
-  return categoryById.get(menuItem.category_id ?? '') === 'lau';
+  return menuItem.is_main_dish === true;
 }
 
 function countRecentActiveOrdersByPhoneMock(phone: string) {
-  const now = Date.now();
+  const nowMs = dayjsNow().valueOf();
   return mockDb.getAllOrders().filter((order) => {
     if (normalizeVietnamPhone(order.phone) !== phone) return false;
     if (!ACTIVE_ORDER_STATUS_SET.has(order.status)) return false;
-    return new Date(order.created_at).getTime() > now - PHONE_WINDOW_MS;
+    return parseInTz(order.created_at, APP_TIMEZONE).valueOf() >
+      nowMs - ORDER_TIME.PHONE_WINDOW_MS;
   }).length;
+}
+
+async function rollbackPromotionCounter(
+  supabase: ReturnType<typeof createServerSupabase>,
+  promotionId: string | null,
+) {
+  if (!promotionId) return;
+  const { data: promotion } = await supabase
+    .from('promotions')
+    .select('used_count')
+    .eq('id', promotionId)
+    .maybeSingle();
+  if (!promotion) return;
+  const usedCount = Number(promotion.used_count ?? 0);
+  const nextUsedCount = Math.max(usedCount - 1, 0);
+  await supabase
+    .from('promotions')
+    .update({ used_count: nextUsedCount })
+    .eq('id', promotionId);
+}
+
+async function cleanupFailedOrderCreate(
+  supabase: ReturnType<typeof createServerSupabase>,
+  orderId: string,
+  promotionId: string | null,
+) {
+  await supabase.from('orders').delete().eq('id', orderId);
+  await rollbackPromotionCounter(supabase, promotionId);
 }
 
 async function countRecentActiveOrdersByPhoneSupabase(phone: string) {
   const supabase = createServerSupabase();
-  const sinceIso = new Date(Date.now() - PHONE_WINDOW_MS).toISOString();
+  const sinceIso = dayjsNow()
+    .subtract(ORDER_TIME.PHONE_WINDOW_MS, 'millisecond')
+    .toISOString();
   const { count, error } = await supabase
     .from('orders')
     .select('*', { count: 'exact', head: true })
     .eq('phone', phone)
     .gte('created_at', sinceIso)
-    .in('status', [...ACTIVE_ORDER_STATUSES]);
+    .in('status', [...ORDER_ACTIVE_STATUSES]);
   if (error) return null;
   return count ?? 0;
 }
@@ -253,8 +264,8 @@ export async function POST(request: NextRequest) {
 
   const normalizedPhone = normalizeVietnamPhone(body.phone);
   const scheduledValidation = validateScheduledDateSlot(
-    body.scheduledDate,
-    body.scheduledSlot as keyof typeof SCHEDULED_SLOTS,
+    body.scheduled_date,
+    body.scheduled_slot as ScheduledSlotValue,
   );
   if (!scheduledValidation.ok) {
     return NextResponse.json(
@@ -267,30 +278,26 @@ export async function POST(request: NextRequest) {
   if (!hasSupabaseConfig()) {
     const mockRecentOrderCount =
       countRecentActiveOrdersByPhoneMock(normalizedPhone);
-    if (mockRecentOrderCount >= PHONE_ACTIVE_ORDER_LIMIT) {
+    if (mockRecentOrderCount >= ORDER_LIMITS.PHONE_ACTIVE_ORDER_LIMIT) {
       return NextResponse.json(
         { message: phoneRateLimitMessage() },
         { status: 429 },
       );
     }
 
-    const categoryById = new Map(
-      sampleCategories.map((category) => [category.id, category.slug]),
-    );
     const itemByVariantId = new Map(
       sampleMenuItems.flatMap((item) =>
         item.variants.map((variant) => [variant.id, item]),
       ),
     );
     const hasMainDish = body.items.some((item) => {
-      const menuItem = itemByVariantId.get(item.variantId);
+      const menuItem = itemByVariantId.get(item.variant_id);
       if (!menuItem) return false;
-      if (menuItem.is_main_dish) return true;
-      return categoryById.get(menuItem.category_id) === 'lau';
+      return menuItem.is_main_dish === true;
     });
     if (!hasMainDish) {
       return NextResponse.json(
-        { message: 'Vui lòng chọn ít nhất 1 món lẩu cho đơn hàng.' },
+        { message: 'Vui lòng chọn ít nhất 1 món chính cho đơn hàng.' },
         { status: 400 },
       );
     }
@@ -298,15 +305,15 @@ export async function POST(request: NextRequest) {
     const menuItemsInOrder = Array.from(
       new Set(
         body.items
-          .map((item) => itemByVariantId.get(item.variantId))
+          .map((item) => itemByVariantId.get(item.variant_id))
           .filter(Boolean) as MenuRuleItem[],
       ),
     );
     const mainDishItemsInOrder = menuItemsInOrder.filter((menuItem) =>
-      isMainDishMenuItem(menuItem, categoryById),
+      isMainDishMenuItem(menuItem),
     );
     const blockedMenuItems = getDateBlockedMenuItems(
-      body.scheduledDate,
+      body.scheduled_date,
       mainDishItemsInOrder,
     );
     if (blockedMenuItems.length > 0) {
@@ -323,12 +330,13 @@ export async function POST(request: NextRequest) {
         item.variants.map((variant) => [variant.id, variant.price]),
       ),
     );
-    const now = new Date().toISOString();
-    const order: Order = {
+    const now = toIso();
+    const order: AppTypes.Order = {
       id: crypto.randomUUID(),
-      session_id: body.sessionId,
-      customer_name: body.customerName,
+      session_id: body.session_id,
+      customer_name: body.customer_name,
       phone: normalizedPhone,
+      email: body.email ?? null,
       address: body.address,
       province: body.province,
       district: body.district,
@@ -337,9 +345,11 @@ export async function POST(request: NextRequest) {
       scheduled_for: scheduledFor,
       total_amount: body.items.reduce(
         (sum, item) =>
-          sum + item.quantity * (variantPriceMap.get(item.variantId) ?? 10000),
+          sum + item.quantity * (variantPriceMap.get(item.variant_id) ?? 10000),
         0,
       ),
+      discount_amount: 0,
+      promotion_id: null,
       status: 'pending',
       tracking_id: null,
       tracking_url: null,
@@ -347,12 +357,12 @@ export async function POST(request: NextRequest) {
       created_at: now,
       updated_at: now,
     };
-    const orderItems: OrderItem[] = body.items.map((item) => ({
+    const orderItems: AppTypes.OrderItem[] = body.items.map((item) => ({
       id: crypto.randomUUID(),
       order_id: order.id,
-      menu_variant_id: item.variantId,
+      menu_variant_id: item.variant_id,
       quantity: item.quantity,
-      unit_price: variantPriceMap.get(item.variantId) ?? 10000,
+      unit_price: variantPriceMap.get(item.variant_id) ?? 10000,
     }));
     mockDb.createOrder(order, orderItems);
     return NextResponse.json({ orderId: order.id });
@@ -362,7 +372,7 @@ export async function POST(request: NextRequest) {
     await countRecentActiveOrdersByPhoneSupabase(normalizedPhone);
   if (
     recentOrderCount !== null &&
-    recentOrderCount >= PHONE_ACTIVE_ORDER_LIMIT
+    recentOrderCount >= ORDER_LIMITS.PHONE_ACTIVE_ORDER_LIMIT
   ) {
     return NextResponse.json(
       { message: phoneRateLimitMessage() },
@@ -371,7 +381,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServerSupabase();
-  const variantIds = body.items.map((item) => item.variantId);
+  const variantIds = body.items.map((item) => item.variant_id);
   const { data: variants, error: variantsError } = await supabase
     .from('menu_variants')
     .select('id,price,menu_item_id')
@@ -399,27 +409,6 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
 
-  const categoryIds = [
-    ...new Set(
-      (menuItems ?? []).map((menuItem) => menuItem.category_id as string),
-    ),
-  ];
-  const { data: categories, error: categoriesError } = await supabase
-    .from('categories')
-    .select('id,slug')
-    .in('id', categoryIds);
-  if (categoriesError)
-    return NextResponse.json(
-      { message: categoriesError.message },
-      { status: 500 },
-    );
-
-  const categoryById = new Map(
-    (categories ?? []).map((category) => [
-      category.id as string,
-      category.slug as string,
-    ]),
-  );
   const itemById = new Map(
     (menuItems ?? []).map((item) => [
       item.id as string,
@@ -447,12 +436,11 @@ export async function POST(request: NextRequest) {
   const hasMainDish = (variants ?? []).some((variant) => {
     const menuItem = itemById.get(variant.menu_item_id as string);
     if (!menuItem) return false;
-    if (menuItem.isMainDish) return true;
-    return categoryById.get(menuItem.categoryId) === 'lau';
+    return menuItem.isMainDish;
   });
   if (!hasMainDish) {
     return NextResponse.json(
-      { message: 'Vui lòng chọn ít nhất 1 món lẩu cho đơn hàng.' },
+      { message: 'Vui lòng chọn ít nhất 1 món chính cho đơn hàng.' },
       { status: 400 },
     );
   }
@@ -470,10 +458,10 @@ export async function POST(request: NextRequest) {
     }),
   );
   const mainDishItemsInOrder = menuItemsInOrder.filter((menuItem) =>
-    isMainDishMenuItem(menuItem, categoryById),
+    isMainDishMenuItem(menuItem),
   );
   const blockedMenuItems = getDateBlockedMenuItems(
-    body.scheduledDate,
+    body.scheduled_date,
     mainDishItemsInOrder,
   );
   if (blockedMenuItems.length > 0) {
@@ -490,16 +478,53 @@ export async function POST(request: NextRequest) {
   );
   const totalAmount = body.items.reduce(
     (sum, item) =>
-      sum + (priceByVariant.get(item.variantId) ?? 0) * item.quantity,
+      sum + (priceByVariant.get(item.variant_id) ?? 0) * item.quantity,
     0,
   );
+
+  let promotionId: string | null = null;
+  let discountAmount = 0;
+  if (body.promotion_code?.trim()) {
+    const promotion = await getPromotionByCode(supabase, body.promotion_code);
+    const validatedPromotion = validatePromotionForOrder(promotion, totalAmount);
+    if (!validatedPromotion.ok) {
+      return NextResponse.json(
+        { message: validatedPromotion.message },
+        { status: 400 },
+      );
+    }
+
+    const { data: consumed, error: consumeError } = await supabase.rpc(
+      'try_consume_promotion',
+      {
+        p_promotion_id: validatedPromotion.promotion.id,
+        p_now: new Date().toISOString(),
+      },
+    );
+    if (consumeError) {
+      return NextResponse.json({ message: consumeError.message }, { status: 500 });
+    }
+    if (!consumed) {
+      return NextResponse.json(
+        {
+          message:
+            'Mã khuyến mãi vừa hết lượt hoặc không còn hợp lệ. Vui lòng thử mã khác.',
+        },
+        { status: 409 },
+      );
+    }
+
+    promotionId = validatedPromotion.promotion.id;
+    discountAmount = validatedPromotion.discountAmount;
+  }
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
-      session_id: body.sessionId,
-      customer_name: body.customerName,
+      session_id: body.session_id,
+      customer_name: body.customer_name,
       phone: normalizedPhone,
+      email: body.email ?? null,
       address: body.address,
       province: body.province,
       district: body.district,
@@ -507,25 +532,43 @@ export async function POST(request: NextRequest) {
       note: body.note,
       scheduled_for: scheduledFor,
       total_amount: totalAmount,
+      promotion_id: promotionId,
+      discount_amount: discountAmount,
       status: 'pending',
     })
     .select('id')
     .single();
 
-  if (orderError)
+  if (orderError) {
+    await rollbackPromotionCounter(supabase, promotionId);
     return NextResponse.json({ message: orderError.message }, { status: 500 });
+  }
 
   const orderItems = body.items.map((item) => ({
     order_id: order.id,
-    menu_variant_id: item.variantId,
+    menu_variant_id: item.variant_id,
     quantity: item.quantity,
-    unit_price: priceByVariant.get(item.variantId) ?? 0,
+    unit_price: priceByVariant.get(item.variant_id) ?? 0,
   }));
   const { error: itemsError } = await supabase
     .from('order_items')
     .insert(orderItems);
-  if (itemsError)
+  if (itemsError) {
+    await cleanupFailedOrderCreate(supabase, order.id, promotionId);
     return NextResponse.json({ message: itemsError.message }, { status: 500 });
+  }
+
+  if (promotionId) {
+    const { error: usageError } = await supabase.from('promotion_usages').insert({
+      promotion_id: promotionId,
+      order_id: order.id,
+      discount_amount: discountAmount,
+    });
+    if (usageError) {
+      await cleanupFailedOrderCreate(supabase, order.id, promotionId);
+      return NextResponse.json({ message: usageError.message }, { status: 500 });
+    }
+  }
 
   await supabase.from('order_status_logs').insert({
     order_id: order.id,

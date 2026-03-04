@@ -1,0 +1,54 @@
+---
+description: Enforce zod + react-hook-form and snake_case form schema
+alwaysApply: true
+---
+
+# Form Handling Standards
+
+- Do not use `useState` + `setForm` as the primary form state pattern.
+- Always build forms with `react-hook-form` + `zodResolver`.
+- Define form data shape in Zod first, then infer type from schema:
+  - `type FormValues = z.infer<typeof formSchema>`
+- Use snake_case field names in form schemas to match DB schema directly.
+- Avoid creating a separate mapped type just to convert camelCase/snake_case.
+
+## Required Pattern
+
+```tsx
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const order_form_schema = z.object({
+  customer_name: z.string().min(2),
+  phone: z.string().min(1),
+  email: z.string().email().optional().nullable(),
+  district: z.string().min(1),
+});
+
+type OrderFormValues = z.infer<typeof order_form_schema>;
+
+const form = useForm<OrderFormValues>({
+  resolver: zodResolver(order_form_schema),
+  defaultValues: {
+    customer_name: '',
+    phone: '',
+    email: null,
+    district: '',
+  },
+});
+```
+
+## Avoid
+
+```tsx
+type OrderFormModel = {
+  customerName: string;
+  phone: string;
+};
+
+const [form, setForm] = useState<OrderFormModel>({
+  customerName: '',
+  phone: '',
+});
+```

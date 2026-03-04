@@ -4,7 +4,7 @@ import {
   createServerSupabaseAuthClient,
   hasSupabaseConfig,
 } from '@/lib/server/supabase';
-import { adminLoginSchema } from '@/lib/utils/validation';
+import { adminLoginSchema } from '@/lib/schemas';
 
 export async function POST(request: NextRequest) {
   if (!hasSupabaseConfig()) {

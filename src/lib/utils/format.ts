@@ -1,4 +1,5 @@
 import currency from 'currency.js';
+import { ORDER_STATUS_UI } from '@/lib/constants/order';
 
 const vndCurrencyOptions = {
   symbol: 'đ',
@@ -27,65 +28,23 @@ export function formatCurrencyInput(value: string): string {
 }
 
 export function statusLabel(status: string): string {
-  switch (status) {
-    case 'pending':
-      return 'Chờ xác nhận';
-    case 'confirmed':
-      return 'Đã xác nhận';
-    case 'preparing':
-      return 'Đang chuẩn bị';
-    case 'shipping':
-      return 'Đang giao';
-    case 'delivered':
-      return 'Đã giao';
-    case 'cancelled':
-      return 'Đã hủy';
-    case 'expired':
-      return 'Hết hạn';
-    default:
-      return status;
-  }
+  if (status === 'expired') return 'Hết hạn';
+  return ORDER_STATUS_UI[status as keyof typeof ORDER_STATUS_UI]?.label ?? status;
 }
 
 export function statusClass(status: string): string {
-  switch (status) {
-    case 'pending':
-      return 'border-transparent bg-secondary text-secondary-foreground';
-    case 'confirmed':
-      return 'border-transparent bg-primary text-primary-foreground';
-    case 'preparing':
-      return 'border-border bg-accent text-accent-foreground';
-    case 'shipping':
-      return 'border-transparent bg-primary/85 text-primary-foreground';
-    case 'delivered':
-      return 'border-transparent bg-primary text-primary-foreground';
-    case 'cancelled':
-      return 'border-transparent bg-destructive text-primary-foreground';
-    case 'expired':
-      return 'border-border bg-muted text-muted-foreground';
-    default:
-      return 'border-border bg-muted text-foreground';
-  }
+  if (status === 'expired') return 'border-border bg-muted text-muted-foreground';
+  return (
+    ORDER_STATUS_UI[status as keyof typeof ORDER_STATUS_UI]?.className ??
+    'border-border bg-muted text-foreground'
+  );
 }
 
 export function statusBadgeVariant(
   status: string,
 ): 'default' | 'secondary' | 'outline' | 'destructive' {
-  switch (status) {
-    case 'pending':
-      return 'secondary';
-    case 'confirmed':
-    case 'shipping':
-    case 'delivered':
-      return 'default';
-    case 'preparing':
-    case 'expired':
-      return 'outline';
-    case 'cancelled':
-      return 'destructive';
-    default:
-      return 'outline';
-  }
+  if (status === 'expired') return 'outline';
+  return ORDER_STATUS_UI[status as keyof typeof ORDER_STATUS_UI]?.badgeVariant ?? 'outline';
 }
 
 export function toSlug(value: string): string {

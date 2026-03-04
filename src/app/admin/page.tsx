@@ -8,6 +8,7 @@ import {
   statusBadgeVariant,
   statusLabel,
 } from '@/lib/utils/format';
+import { formatDateTimeVi } from '@/lib/date';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -112,7 +113,7 @@ export default function AdminDashboardPage() {
                       {formatCurrency(order.total_amount ?? 0)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(order.created_at).toLocaleString('vi-VN')}
+                      {formatDateTimeVi(order.created_at)}
                     </p>
                   </div>
                 </Link>

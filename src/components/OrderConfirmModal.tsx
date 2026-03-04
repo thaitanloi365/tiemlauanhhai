@@ -1,8 +1,7 @@
 'use client';
 
-import type { CartLine } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils/format';
-import type { OrderFormModel } from '@/components/OrderForm';
+import type { OrderFormValues } from '@/components/OrderForm';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,9 +14,11 @@ import {
 
 type Props = {
   open: boolean;
-  form: OrderFormModel;
-  lines: CartLine[];
+  form: OrderFormValues;
+  lines: AppTypes.CartLine[];
   totalAmount: number;
+  discountAmount?: number;
+  promotionCode?: string;
   scheduledDateLabel?: string;
   scheduledSlotLabel?: string;
   submitting?: boolean;
@@ -30,12 +31,15 @@ export function OrderConfirmModal({
   form,
   lines,
   totalAmount,
+  discountAmount = 0,
+  promotionCode,
   scheduledDateLabel,
   scheduledSlotLabel,
   submitting,
   onCancel,
   onConfirm,
 }: Props) {
+  const payableAmount = Math.max(0, totalAmount - discountAmount);
   const restaurantNotes = [
     ...new Set(lines.map((line) => line.itemNote?.trim()).filter(Boolean)),
   ];
@@ -65,11 +69,16 @@ export function OrderConfirmModal({
           <section className="rounded-xl border border-border bg-muted/40 p-3">
             <p className="font-medium">Thông tin khách hàng</p>
             <p className="mt-1">
-              Họ tên: <strong>{form.customerName}</strong>
+              Họ tên: <strong>{form.customer_name}</strong>
             </p>
             <p>
               SĐT: <strong>{form.phone}</strong>
             </p>
+            {form.email ? (
+              <p>
+                Email: <strong>{form.email}</strong>
+              </p>
+            ) : null}
             <p>
               Địa chỉ:{' '}
               <strong>
@@ -78,11 +87,11 @@ export function OrderConfirmModal({
             </p>
             <p>
               Ngày nhận món:{' '}
-              <strong>{scheduledDateLabel || form.scheduledDate}</strong>
+              <strong>{scheduledDateLabel || form.scheduled_date}</strong>
             </p>
             <p>
               Khung giờ nhận món:{' '}
-              <strong>{scheduledSlotLabel || form.scheduledSlot}</strong>
+              <strong>{scheduledSlotLabel || form.scheduled_slot}</strong>
             </p>
           </section>
           <section className="rounded-xl border border-border p-3">
@@ -106,11 +115,23 @@ export function OrderConfirmModal({
               ))}
             </div>
             <div className="mt-3 border-t border-border pt-2">
+              {discountAmount > 0 ? (
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-muted-foreground">
+                    Giảm giá{promotionCode ? ` (${promotionCode})` : ''}
+                  </span>
+                  <strong className="text-primary">- {formatCurrency(discountAmount)}</strong>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between text-base">
                 <span className="font-semibold">Tổng tiền món</span>
                 <strong className="text-primary">
                   {formatCurrency(totalAmount)}
                 </strong>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-base">
+                <span className="font-semibold">Thanh toán</span>
+                <strong className="text-primary">{formatCurrency(payableAmount)}</strong>
               </div>
             </div>
           </section>

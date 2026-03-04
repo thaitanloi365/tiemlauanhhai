@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
 import { mockDb } from '@/lib/server/mock-db';
-import { adminOrderUpdateSchema } from '@/lib/utils/validation';
-import type { Order } from '@/lib/types';
+import { adminOrderUpdateSchema } from '@/lib/schemas';
 import { resolveAdminUserFromRequest } from '@/lib/server/next-admin';
 
 type RouteContext = {
@@ -89,10 +88,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     );
 
   if (!hasSupabaseConfig()) {
-    const updates: Partial<Order> = {
+    const updates: Partial<AppTypes.Order> = {
       status: parsed.data.status,
-      tracking_id: parsed.data.trackingId ?? null,
-      tracking_url: parsed.data.trackingUrl ?? null,
+      tracking_id: parsed.data.tracking_id ?? null,
+      tracking_url: parsed.data.tracking_url ?? null,
     };
     if (parsed.data.status === 'confirmed') {
       updates.expired_at = null;
@@ -107,10 +106,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const supabase = createServerSupabase();
+  const { data: currentOrder, error: currentOrderError } = await supabase
+    .from('orders')
+    .select('id,status,promotion_id')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (currentOrderError || !currentOrder) {
+    return NextResponse.json({ message: 'Không tìm thấy đơn' }, { status: 404 });
+  }
+
   const updates: Record<string, unknown> = {
     status: parsed.data.status,
-    tracking_id: parsed.data.trackingId ?? null,
-    tracking_url: parsed.data.trackingUrl ?? null,
+    tracking_id: parsed.data.tracking_id ?? null,
+    tracking_url: parsed.data.tracking_url ?? null,
   };
   if (parsed.data.status === 'confirmed') {
     updates.expired_at = null;
@@ -122,6 +130,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   if (error)
     return NextResponse.json({ message: error.message }, { status: 500 });
+
+  const shouldReleasePromotion =
+    parsed.data.status === 'cancelled' &&
+    currentOrder.status !== 'cancelled' &&
+    Boolean(currentOrder.promotion_id);
+  if (shouldReleasePromotion) {
+    const { error: releaseError } = await supabase.rpc('release_promotion_usage', {
+      p_order_id: orderId,
+      p_now: new Date().toISOString(),
+    });
+    if (releaseError) {
+      return NextResponse.json({ message: releaseError.message }, { status: 500 });
+    }
+  }
 
   await supabase.from('order_status_logs').insert({
     order_id: orderId,

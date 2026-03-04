@@ -15,9 +15,9 @@ const PRICE_OPTIONS = ['', 'lt50', '50to100', '100to200', 'gt200'] as const;
 const SORT_OPTIONS = ['popular', 'price_asc', 'price_desc'] as const;
 
 export type MenuFilterState = {
-  category: string;
-  price: (typeof PRICE_OPTIONS)[number];
-  sort: (typeof SORT_OPTIONS)[number];
+  c: string;
+  p: (typeof PRICE_OPTIONS)[number];
+  o: (typeof SORT_OPTIONS)[number];
 };
 
 type Props = {
@@ -31,24 +31,24 @@ export function MenuFilter({
   onChange,
   showAllCategoryOption = true,
 }: Props) {
-  const [filters, setFilters] = useQueryStates({
-    category: parseAsString.withDefault(''),
-    price: parseAsStringEnum([...PRICE_OPTIONS]).withDefault(''),
-    sort: parseAsStringEnum([...SORT_OPTIONS]).withDefault('popular'),
+  const [f, setF] = useQueryStates({
+    c: parseAsString.withDefault(''),
+    p: parseAsStringEnum([...PRICE_OPTIONS]).withDefault(''),
+    o: parseAsStringEnum([...SORT_OPTIONS]).withDefault('popular'),
   });
 
   useEffect(() => {
     if (showAllCategoryOption || categories.length === 0) return;
 
     const onlyCategorySlug = categories[0].slug;
-    if (filters.category !== onlyCategorySlug) {
-      void setFilters({ category: onlyCategorySlug });
+    if (f.c !== onlyCategorySlug) {
+      void setF({ c: onlyCategorySlug });
     }
-  }, [categories, filters.category, setFilters, showAllCategoryOption]);
+  }, [categories, f.c, setF, showAllCategoryOption]);
 
   useEffect(() => {
-    onChange?.(filters as MenuFilterState);
-  }, [filters, onChange]);
+    onChange?.(f as MenuFilterState);
+  }, [f, onChange]);
 
   return (
     <div className="card-surface p-4">
@@ -57,12 +57,12 @@ export function MenuFilter({
           <Label className="mb-1 block">Danh mục</Label>
           <Select
             value={
-              filters.category ||
+              f.c ||
               (showAllCategoryOption ? 'all' : (categories[0]?.slug ?? ''))
             }
             onValueChange={(value) =>
-              setFilters({
-                category:
+              setF({
+                c:
                   showAllCategoryOption && value === 'all' ? '' : value,
               })
             }
@@ -89,12 +89,12 @@ export function MenuFilter({
         <div className="text-sm">
           <Label className="mb-1 block">Mức giá</Label>
           <Select
-            value={filters.price || 'all'}
+            value={f.p || 'all'}
             onValueChange={(value) =>
-              setFilters({
-                price: (value === 'all'
+              setF({
+                p: (value === 'all'
                   ? ''
-                  : value) as MenuFilterState['price'],
+                  : value) as MenuFilterState['p'],
               })
             }
           >
@@ -113,9 +113,9 @@ export function MenuFilter({
         <div className="text-sm">
           <Label className="mb-1 block">Sắp xếp</Label>
           <Select
-            value={filters.sort}
+            value={f.o}
             onValueChange={(value) =>
-              setFilters({ sort: value as MenuFilterState['sort'] })
+              setF({ o: value as MenuFilterState['o'] })
             }
           >
             <SelectTrigger className="w-full">

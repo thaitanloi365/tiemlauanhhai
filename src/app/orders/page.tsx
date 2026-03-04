@@ -7,10 +7,9 @@ import { Footer } from '@/components/Footer';
 import { BottomNav } from '@/components/BottomNav';
 import { OrderHistory } from '@/components/OrderHistory';
 import { sessionStore } from '@/lib/stores/session';
-import type { Order } from '@/lib/types';
 
 type OrdersResponse = {
-  orders: Order[];
+  orders: AppTypes.Order[];
 };
 
 export default function OrdersPage() {

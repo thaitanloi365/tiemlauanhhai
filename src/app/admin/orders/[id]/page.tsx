@@ -6,8 +6,10 @@ import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { ORDER_STATUS_VALUES } from '@/lib/constants/order';
+import { addHoursInTz, formatLocaleDate, formatLocaleTime, formatDateTimeVi } from '@/lib/date';
 import { formatCurrency, statusLabel } from '@/lib/utils/format';
-import { adminOrderUpdateSchema } from '@/lib/utils/validation';
+import { adminOrderUpdateSchema } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +26,7 @@ type OrderDetailResponse = {
     id: string;
     customer_name: string;
     phone: string;
+    email: string | null;
     address: string;
     province: string;
     district: string;
@@ -31,6 +34,7 @@ type OrderDetailResponse = {
     note: string | null;
     scheduled_for: string | null;
     total_amount: number;
+    discount_amount: number;
     status: string;
     tracking_id: string | null;
     tracking_url: string | null;
@@ -45,18 +49,9 @@ type OrderDetailResponse = {
   logs: Array<{ status: string; created_at: string }>;
 };
 
-const STATUS_OPTIONS = [
-  'pending',
-  'confirmed',
-  'preparing',
-  'shipping',
-  'delivered',
-  'cancelled',
-] as const;
-
 const adminOrderUpdateFormSchema = adminOrderUpdateSchema.extend({
-  trackingId: z.string().max(120),
-  trackingUrl: z
+  tracking_id: z.string().max(120),
+  tracking_url: z
     .string()
     .refine(
       (value) => value.trim() === '' || /^https?:\/\/.+/i.test(value.trim()),
@@ -69,26 +64,22 @@ type AdminOrderUpdateFormValues = z.infer<typeof adminOrderUpdateFormSchema>;
 
 function formatScheduledFor(value: string | null | undefined) {
   if (!value) return null;
-  const start = new Date(value);
-  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-  const dateLabel = start.toLocaleDateString('vi-VN', {
+  const end = addHoursInTz(value, 2).toDate();
+  const dateLabel = formatLocaleDate(value, 'vi-VN', {
     weekday: 'long',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-    timeZone: 'Asia/Ho_Chi_Minh',
   });
-  const startLabel = start.toLocaleTimeString('vi-VN', {
+  const startLabel = formatLocaleTime(value, 'vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-    timeZone: 'Asia/Ho_Chi_Minh',
   });
-  const endLabel = end.toLocaleTimeString('vi-VN', {
+  const endLabel = formatLocaleTime(end, 'vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-    timeZone: 'Asia/Ho_Chi_Minh',
   });
   return `${dateLabel} (${startLabel} - ${endLabel})`;
 }
@@ -107,8 +98,8 @@ export default function AdminOrderDetailPage() {
     resolver: zodResolver(adminOrderUpdateFormSchema),
     defaultValues: {
       status: 'pending',
-      trackingId: '',
-      trackingUrl: '',
+      tracking_id: '',
+      tracking_url: '',
     },
   });
 
@@ -126,13 +117,15 @@ export default function AdminOrderDetailPage() {
   });
 
   const order = detailQuery.data?.order;
+  const discountAmount = Math.max(0, order?.discount_amount ?? 0);
+  const payableAmount = Math.max(0, (order?.total_amount ?? 0) - discountAmount);
 
   useEffect(() => {
     if (!order) return;
     reset({
       status: order.status as AdminOrderUpdateFormValues['status'],
-      trackingId: order.tracking_id ?? '',
-      trackingUrl: order.tracking_url ?? '',
+      tracking_id: order.tracking_id ?? '',
+      tracking_url: order.tracking_url ?? '',
     });
   }, [order, reset]);
 
@@ -143,8 +136,8 @@ export default function AdminOrderDetailPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           status: values.status,
-          trackingId: values.trackingId.trim() || null,
-          trackingUrl: values.trackingUrl.trim() || null,
+          tracking_id: values.tracking_id.trim() || null,
+          tracking_url: values.tracking_url.trim() || null,
         }),
       });
       const data = await res.json();
@@ -206,6 +199,16 @@ export default function AdminOrderDetailPage() {
                   {order.phone}
                 </p>
               </div>
+              {order.email ? (
+                <div className="rounded-xl border border-border bg-muted p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Email
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {order.email}
+                  </p>
+                </div>
+              ) : null}
               <div className="rounded-xl border border-border bg-muted p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Địa chỉ giao hàng
@@ -238,7 +241,7 @@ export default function AdminOrderDetailPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {STATUS_OPTIONS.map((option) => (
+                        {ORDER_STATUS_VALUES.map((option) => (
                           <SelectItem key={option} value={option}>
                             {statusLabel(option)}
                           </SelectItem>
@@ -253,19 +256,19 @@ export default function AdminOrderDetailPage() {
               </div>
               <div className="grid gap-1 text-sm">
                 <Label>Tracking ID</Label>
-                <Input {...register('trackingId')} />
-                {errors.trackingId?.message ? (
+                <Input {...register('tracking_id')} />
+                {errors.tracking_id?.message ? (
                   <p className="text-xs text-destructive">
-                    {errors.trackingId.message}
+                    {errors.tracking_id.message}
                   </p>
                 ) : null}
               </div>
               <div className="grid gap-1 text-sm">
                 <Label>Tracking URL</Label>
-                <Input {...register('trackingUrl')} />
-                {errors.trackingUrl?.message ? (
+                <Input {...register('tracking_url')} />
+                {errors.tracking_url?.message ? (
                   <p className="text-xs text-destructive">
-                    {errors.trackingUrl.message}
+                    {errors.tracking_url.message}
                   </p>
                 ) : null}
               </div>
@@ -308,6 +311,20 @@ export default function AdminOrderDetailPage() {
                 {formatCurrency(order.total_amount ?? 0)}
               </span>
             </div>
+            {discountAmount > 0 ? (
+              <div className="mt-2 flex items-center justify-between">
+                <span className="font-medium">Giảm giá</span>
+                <span className="font-semibold text-primary">
+                  - {formatCurrency(discountAmount)}
+                </span>
+              </div>
+            ) : null}
+            <div className="mt-2 flex items-center justify-between">
+              <span className="font-medium">Thành tiền sau giảm</span>
+              <span className="text-lg font-bold text-primary">
+                {formatCurrency(payableAmount)}
+              </span>
+            </div>
             <h3 className="mt-4 text-lg font-semibold">Timeline trạng thái</h3>
             <ul className="mt-2 space-y-2 text-sm">
               {detailQuery.data?.logs.map((log, index) => (
@@ -316,7 +333,7 @@ export default function AdminOrderDetailPage() {
                   className="rounded-lg bg-muted p-2"
                 >
                   {statusLabel(log.status)} -{' '}
-                  {new Date(log.created_at).toLocaleString('vi-VN')}
+                  {formatDateTimeVi(log.created_at)}
                 </li>
               ))}
             </ul>

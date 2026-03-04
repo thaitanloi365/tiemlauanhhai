@@ -1,0 +1,51 @@
+---
+description: Enforce nuqs grouped filters with short object and short keys
+alwaysApply: true
+---
+
+# URL Search/Filter Standards
+
+- For search/filter state in URL, always use `useQueryStates` from `nuqs`.
+- Group filter params into one short object name (prefer `f`).
+- Use short keys inside filter object to keep querystring compact:
+  - `q` = keyword
+  - `s` = status
+  - `p` = price
+  - `o` = sort order
+  - `c` = category
+- Keep parser definitions colocated in one `useQueryStates` call.
+- Use the same short keys in `queryKey` and `URLSearchParams` mapping.
+
+## Required Pattern
+
+```tsx
+import { parseAsString, useQueryStates } from 'nuqs';
+
+const [f, setF] = useQueryStates({
+  q: parseAsString.withDefault(''),
+  s: parseAsString.withDefault(''),
+  p: parseAsString.withDefault(''),
+  o: parseAsString.withDefault('popular'),
+});
+
+const query = useQuery({
+  queryKey: ['orders', f.s, f.q, f.o],
+  queryFn: async () => {
+    const params = new URLSearchParams();
+    if (f.s) params.set('status', f.s);
+    if (f.q) params.set('q', f.q.trim());
+    const res = await fetch(`/api/orders?${params.toString()}`);
+    return res.json();
+  },
+});
+```
+
+## Avoid
+
+```tsx
+const [filters, setFilters] = useQueryStates({
+  status: parseAsString.withDefault(''),
+  searchKeyword: parseAsString.withDefault(''),
+  sortOrder: parseAsString.withDefault('popular'),
+});
+```

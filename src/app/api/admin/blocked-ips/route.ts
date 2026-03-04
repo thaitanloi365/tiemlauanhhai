@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+import { blockIpSchema } from '@/lib/schemas';
 import { blockIp, listBlockedIps, sanitizeIp } from '@/lib/server/ip-block';
 import { resolveAdminUserFromRequest } from '@/lib/server/next-admin';
-
-const blockIpSchema = z.object({
-  ip: z.string().trim().min(3, 'IP không hợp lệ').max(120, 'IP không hợp lệ'),
-  reason: z.string().trim().max(500).optional().nullable(),
-  expiresAt: z.string().datetime().optional().nullable(),
-});
 
 export async function GET(request: NextRequest) {
   const adminUser = await resolveAdminUserFromRequest(request);

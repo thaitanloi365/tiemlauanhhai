@@ -6,6 +6,7 @@ import {
   MENU_MEDIA_BUCKET,
 } from '@/lib/server/supabase';
 import { resolveAdminUserFromRequest } from '@/lib/server/next-admin';
+import { formatDateOnlyInTz, now as dayjsNow } from '@/lib/date';
 
 function getFileExtension(name: string) {
   const parts = name.split('.');
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
   for (const file of files) {
     const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
     const ext = getFileExtension(file.name);
-    const path = `${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${ext}`;
+    const path = `${formatDateOnlyInTz(dayjsNow().valueOf())}/${crypto.randomUUID()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from(MENU_MEDIA_BUCKET)

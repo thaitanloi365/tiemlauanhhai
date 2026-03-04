@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
-import { subscriberSchema } from '@/lib/utils/validation';
+import { subscriberSchema } from '@/lib/schemas';
 
 export async function POST(request: NextRequest) {
   const payload = await request.json().catch(() => null);

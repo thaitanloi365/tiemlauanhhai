@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import type { Category, MenuItem } from '@/lib/types';
 import { useCartStore } from '@/lib/stores/cart';
 import { formatCurrency } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
@@ -19,8 +18,8 @@ type Props = {
 };
 
 type MenuResponse = {
-  categories: Category[];
-  menuItems: MenuItem[];
+  categories: AppTypes.Category[];
+  menuItems: AppTypes.MenuItem[];
 };
 
 export function MenuDrawer({ open, onClose }: Props) {

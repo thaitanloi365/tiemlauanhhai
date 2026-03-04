@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 const email = process.env.SUPER_ADMIN_EMAIL;
 const password = process.env.SUPER_ADMIN_PASSWORD;
 
-const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
+const supabaseUrl =
+  process.env.PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey =
   process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 

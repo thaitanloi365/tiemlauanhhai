@@ -1,4 +1,9 @@
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/supabase/server';
+import {
+  now as dayjsNow,
+  parseInTz,
+  toIso,
+} from '@/lib/date';
 
 type BlockedIpRecord = {
   id: string;
@@ -30,7 +35,7 @@ function shouldSkipIpBlock() {
 }
 
 function nowIso() {
-  return new Date().toISOString();
+  return toIso();
 }
 
 function normalizeIp(input: string) {
@@ -41,10 +46,10 @@ function normalizeIp(input: string) {
 
 function isRecordActive(
   record: Pick<BlockedIpRecord, 'expires_at'>,
-  now = Date.now(),
+  now = dayjsNow().valueOf(),
 ) {
   if (!record.expires_at) return true;
-  return new Date(record.expires_at).getTime() > now;
+  return parseInTz(record.expires_at).valueOf() > now;
 }
 
 function setCachedStatus(
@@ -57,19 +62,19 @@ function setCachedStatus(
     blocked,
     reason,
     expiresAt,
-    cachedAt: Date.now(),
+    cachedAt: dayjsNow().valueOf(),
   });
 }
 
 function getCachedStatus(ip: string) {
   const cached = blockStatusCache.get(ip);
   if (!cached) return null;
-  if (Date.now() - cached.cachedAt > BLOCK_CACHE_TTL_MS) return null;
+  if (dayjsNow().valueOf() - cached.cachedAt > BLOCK_CACHE_TTL_MS) return null;
   return cached;
 }
 
 function cleanupLocalState() {
-  const now = Date.now();
+  const now = dayjsNow().valueOf();
 
   for (const [ip, record] of localBlockedIps.entries()) {
     if (!isRecordActive(record, now)) {
@@ -204,7 +209,7 @@ export async function recordRateLimitViolation(ipInput: string) {
   if (!ip) return { autoBlocked: false };
 
   cleanupLocalState();
-  const now = Date.now();
+  const now = dayjsNow().valueOf();
   const recent = [...(violationsByIp.get(ip) ?? []), now].filter(
     (timestamp) => timestamp > now - AUTO_BLOCK_WINDOW_MS,
   );
@@ -215,7 +220,9 @@ export async function recordRateLimitViolation(ipInput: string) {
   const existing = await isIpBlocked(ip);
   if (existing.blocked) return { autoBlocked: false };
 
-  const expiresAt = new Date(now + AUTO_BLOCK_DURATION_MS).toISOString();
+  const expiresAt = dayjsNow()
+    .add(AUTO_BLOCK_DURATION_MS, 'millisecond')
+    .toISOString();
   const reason = 'Auto-block due to repeated rate limit violations';
   const blocked = await blockIp({
     ip,

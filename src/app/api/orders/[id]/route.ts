@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
 import { mockDb } from '@/lib/server/mock-db';
-import { adminOrderUpdateSchema } from '@/lib/utils/validation';
+import { adminOrderUpdateSchema } from '@/lib/schemas';
 import { resolveAdminUserFromRequest } from '@/lib/server/next-admin';
 import type { AdminUser } from '@/lib/server/admin-auth';
 
@@ -96,8 +96,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (!hasSupabaseConfig()) {
     const updated = mockDb.updateOrder(params.id ?? '', {
       status: parsed.data.status,
-      tracking_id: parsed.data.trackingId ?? null,
-      tracking_url: parsed.data.trackingUrl ?? null,
+      tracking_id: parsed.data.tracking_id ?? null,
+      tracking_url: parsed.data.tracking_url ?? null,
     });
     if (!updated)
       return NextResponse.json(
@@ -112,8 +112,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     .from('orders')
     .update({
       status: parsed.data.status,
-      tracking_id: parsed.data.trackingId ?? null,
-      tracking_url: parsed.data.trackingUrl ?? null,
+      tracking_id: parsed.data.tracking_id ?? null,
+      tracking_url: parsed.data.tracking_url ?? null,
     })
     .eq('id', params.id);
 

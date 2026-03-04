@@ -4,10 +4,7 @@ import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import {
-  employeeSchema,
-  employeeUpdateSchema,
-} from '@/lib/utils/validation';
+import { employeeSchema, employeeUpdateSchema } from '@/lib/schemas';
 import { strongPasswordGuideline } from '@/lib/utils/password-policy';
 import { Button } from '@/components/ui/button';
 import {
@@ -89,7 +86,7 @@ export function EmployeeForm({
       email: '',
       password: '',
       role: 'manager',
-      displayName: '',
+      display_name: '',
     },
   });
 
@@ -100,7 +97,7 @@ export function EmployeeForm({
       email: employee?.email ?? '',
       password: '',
       role: employee?.role ?? roleOptions[0]?.value ?? 'manager',
-      displayName: employee?.display_name ?? '',
+      display_name: employee?.display_name ?? '',
     });
   }, [open, employee, roleOptions, mode, reset]);
 
@@ -113,9 +110,9 @@ export function EmployeeForm({
             email: values.email,
             password: values.password,
             role: values.role,
-            displayName: values.displayName || null,
+            display_name: values.display_name || null,
           }
-        : { role: values.role, displayName: values.displayName || null };
+        : { role: values.role, display_name: values.display_name || null };
     const endpoint =
       values.mode === 'create'
         ? '/api/admin/employees'
@@ -203,11 +200,11 @@ export function EmployeeForm({
             <Input
               type="text"
               placeholder="Ví dụ: Quản lý ca sáng"
-              {...register('displayName')}
+              {...register('display_name')}
             />
-            {errors.displayName?.message ? (
+            {errors.display_name?.message ? (
               <p className="text-xs text-destructive">
-                {errors.displayName.message}
+                {errors.display_name.message}
               </p>
             ) : null}
           </div>

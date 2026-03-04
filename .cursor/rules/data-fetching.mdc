@@ -1,0 +1,66 @@
+---
+description: Enforce react-query for API query/mutation and loading states
+alwaysApply: true
+---
+
+# Data Fetching Standards
+
+- Always use `@tanstack/react-query` for API I/O in UI code.
+- Use `useQuery` for read/GET operations.
+- Use `useMutation` for write operations (POST/PUT/PATCH/DELETE).
+- Do not implement API loading with manual `useState` booleans.
+- Use loading/error flags from react-query:
+  - `isLoading` for query loading
+  - `isPending` for mutation loading
+  - `isError` and `error` for error rendering
+- Keep cache keys explicit and stable with `queryKey`.
+
+## Required Query Pattern
+
+```tsx
+const ordersQuery = useQuery({
+  queryKey: ['admin', 'orders', f.s, f.q],
+  queryFn: async () => {
+    const params = new URLSearchParams();
+    if (f.s) params.set('status', f.s);
+    if (f.q) params.set('q', f.q.trim());
+
+    const res = await fetch(`/api/admin/orders?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message ?? 'Không tải được danh sách đơn');
+    return data.orders ?? [];
+  },
+});
+```
+
+## Required Mutation Pattern
+
+```tsx
+const createOrderMutation = useMutation({
+  mutationFn: async (payload: unknown) => {
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message ?? 'Không thể tạo đơn hàng.');
+    return data;
+  },
+});
+```
+
+## Avoid
+
+```tsx
+const [loading, setLoading] = useState(false);
+const [data, setData] = useState(null);
+
+useEffect(() => {
+  setLoading(true);
+  fetch('/api/foo')
+    .then((res) => res.json())
+    .then(setData)
+    .finally(() => setLoading(false));
+}, []);
+```

@@ -1,6 +1,7 @@
 import { Facebook, MessageCircleMore, Music2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { currentYearInTz } from '@/lib/date';
 
 export function Footer() {
   return (
@@ -65,7 +66,7 @@ export function Footer() {
         </div>
       </div>
       <p className="container-shell mt-8 text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Tiệm Lẩu Anh Hai.
+        © {currentYearInTz()} Tiệm Lẩu Anh Hai.
       </p>
     </footer>
   );

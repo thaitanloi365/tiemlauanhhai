@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const EXPIRE_AFTER_MS = DAY_MS;
-const DELETE_AFTER_EXPIRED_MS = 7 * DAY_MS;
+import { ORDER_TIME } from '@/lib/constants/order';
+import { now as dayjsNow } from '@/lib/date';
 
 function isAuthorized(request: NextRequest, secret: string | undefined) {
   if (!secret) return false;
@@ -25,14 +23,14 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const now = new Date();
+  const now = dayjsNow();
   const nowIso = now.toISOString();
-  const expireCutoffIso = new Date(
-    now.getTime() - EXPIRE_AFTER_MS,
-  ).toISOString();
-  const deleteCutoffIso = new Date(
-    now.getTime() - DELETE_AFTER_EXPIRED_MS,
-  ).toISOString();
+  const expireCutoffIso = now
+    .subtract(ORDER_TIME.EXPIRE_AFTER_MS, 'millisecond')
+    .toISOString();
+  const deleteCutoffIso = now
+    .subtract(ORDER_TIME.DELETE_AFTER_EXPIRED_MS, 'millisecond')
+    .toISOString();
   const supabase = createServerSupabase();
 
   const { data: markedRows, error: markError } = await supabase

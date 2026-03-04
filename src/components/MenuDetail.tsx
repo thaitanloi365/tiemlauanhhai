@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import type { MenuItem } from '@/lib/types';
 import { useCartStore } from '@/lib/stores/cart';
 import { formatCurrency } from '@/lib/utils/format';
 import { MediaGallery } from '@/components/MediaGallery';
@@ -11,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type Props = {
-  item: MenuItem;
+  item: AppTypes.MenuItem;
 };
 
 export function MenuDetail({ item }: Props) {

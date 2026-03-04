@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import type { MenuItem as MenuItemType } from '@/lib/types';
 import { toast } from 'sonner';
 import { useCartStore } from '@/lib/stores/cart';
 import { formatCurrency } from '@/lib/utils/format';
@@ -17,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 
 type Props = {
-  item: MenuItemType;
+  item: AppTypes.MenuItem;
   detailMode?: 'page' | 'dialog';
 };
 

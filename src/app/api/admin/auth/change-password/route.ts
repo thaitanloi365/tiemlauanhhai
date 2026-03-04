@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { changePasswordSchema } from '@/lib/utils/validation';
+import { changePasswordSchema } from '@/lib/schemas';
 import {
   createServerSupabase,
   createServerSupabaseAuthClient,
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   const { data: signInData, error: signInError } =
     await authClient.auth.signInWithPassword({
       email: adminUser.email,
-      password: parsed.data.currentPassword,
+      password: parsed.data.current_password,
     });
   if (signInError || !signInData.user) {
     return NextResponse.json(
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   const { error: updateError } = await adminClient.auth.admin.updateUserById(
     adminUser.id,
     {
-      password: parsed.data.newPassword,
+      password: parsed.data.new_password,
     },
   );
   if (updateError)

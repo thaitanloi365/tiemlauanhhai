@@ -1,6 +1,5 @@
 import { sampleCategories, sampleMenuItems } from '@/lib/sample-data';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/supabase/server';
-import type { Category, MenuItem, MenuMedia, MenuVariant } from '@/lib/types';
 
 export async function getMenuData() {
   if (!hasSupabaseConfig()) {
@@ -37,22 +36,22 @@ export async function getMenuData() {
       .order('sort_order', { ascending: true }),
   ]);
 
-  const variantsByItem = new Map<string, MenuVariant[]>();
-  for (const variant of (variants ?? []) as MenuVariant[]) {
+  const variantsByItem = new Map<string, AppTypes.MenuVariant[]>();
+  for (const variant of (variants ?? []) as AppTypes.MenuVariant[]) {
     const group = variantsByItem.get(variant.menu_item_id) ?? [];
     group.push(variant);
     variantsByItem.set(variant.menu_item_id, group);
   }
 
-  const mediaByItem = new Map<string, MenuMedia[]>();
-  for (const itemMedia of (media ?? []) as MenuMedia[]) {
+  const mediaByItem = new Map<string, AppTypes.MenuMedia[]>();
+  for (const itemMedia of (media ?? []) as AppTypes.MenuMedia[]) {
     const group = mediaByItem.get(itemMedia.menu_item_id) ?? [];
     group.push(itemMedia);
     mediaByItem.set(itemMedia.menu_item_id, group);
   }
 
-  const menuItems: MenuItem[] = (
-    (items ?? []) as Omit<MenuItem, 'variants' | 'media'>[]
+  const menuItems: AppTypes.MenuItem[] = (
+    (items ?? []) as Omit<AppTypes.MenuItem, 'variants' | 'media'>[]
   ).map((item) => ({
     ...item,
     variants: variantsByItem.get(item.id) ?? [],
@@ -61,7 +60,7 @@ export async function getMenuData() {
 
   return {
     source: 'supabase' as const,
-    categories: (categories ?? []) as Category[],
+    categories: (categories ?? []) as AppTypes.Category[],
     menuItems,
   };
 }

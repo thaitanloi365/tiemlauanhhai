@@ -1,7 +1,10 @@
 SHELL := /bin/sh
 
-ifneq (,$(wildcard .env))
-include .env
+ENV ?= dev
+ENV_FILE := .env.$(ENV)
+
+ifneq (,$(wildcard $(ENV_FILE)))
+include $(ENV_FILE)
 export
 endif
 
@@ -19,7 +22,8 @@ help:
 	@echo "  make migration-new NAME=... - Create timestamped migration file"
 	@echo "  make db-nuke         - Reset remote DB from current migrations (no seed)"
 	@echo "  make db-reset        - Nuke + migrate + seed admin"
-	@echo "  make run CMD='...'   - Run any command with .env exported"
+	@echo "  make run CMD='...'   - Run any command with selected env exported"
+	@echo "  ENV options: dev (default) or prod"
 
 dev:
 	bun run dev

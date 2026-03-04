@@ -2,30 +2,35 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Cart } from '@/components/Cart';
-import { OrderForm, type OrderFormModel } from '@/components/OrderForm';
+import {
+  OrderForm,
+  type OrderFormValues,
+  useOrderForm,
+} from '@/components/OrderForm';
 import { OrderConfirmModal } from '@/components/OrderConfirmModal';
 import { BottomNav } from '@/components/BottomNav';
 import { useCartStore, selectCartTotal } from '@/lib/stores/cart';
 import { sessionStore } from '@/lib/stores/session';
+import { SCHEDULED_SLOT_OPTIONS } from '@/lib/constants/order';
+import {
+  addDaysInTz,
+  formatDateOnlyInTz,
+  formatLocaleDate,
+  now as dayjsNow,
+} from '@/lib/date';
 import { Button } from '@/components/ui/button';
-
-const SLOT_OPTIONS = [
-  { value: '10:00-12:00', label: '10:00 - 12:00' },
-  { value: '12:00-14:00', label: '12:00 - 14:00' },
-  { value: '14:00-16:00', label: '14:00 - 16:00' },
-  { value: '16:00-18:00', label: '16:00 - 18:00' },
-  { value: '18:00-20:00', label: '18:00 - 20:00' },
-];
+import { Input } from '@/components/ui/input';
+import { formatCurrency } from '@/lib/utils/format';
 
 function nextSevenDays() {
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() + index);
-    const value = date.toISOString().slice(0, 10);
-    const label = date.toLocaleDateString('vi-VN', {
+    const date = addDaysInTz(dayjsNow().valueOf(), index);
+    const value = formatDateOnlyInTz(date.toDate());
+    const label = formatLocaleDate(date.toDate(), 'vi-VN', {
       weekday: 'long',
       day: '2-digit',
       month: '2-digit',
@@ -34,23 +39,9 @@ function nextSevenDays() {
   });
 }
 
-const EMPTY_FORM: OrderFormModel = {
-  customerName: '',
-  phone: '',
-  website: '',
-  province: 'Thành phố Hồ Chí Minh',
-  district: '',
-  ward: '',
-  address: '',
-  note: '',
-  scheduledDate: '',
-  scheduledSlot: '',
-};
-
 type MenuRuleItem = {
   id: string;
   name: string;
-  category_id?: string;
   is_main_dish?: boolean;
   block_today?: boolean;
   block_today_reason?: string | null;
@@ -58,121 +49,170 @@ type MenuRuleItem = {
   blocked_delivery_date_reasons?: Record<string, string> | null;
 };
 
-type CategoryRuleItem = {
-  id: string;
-  slug?: string;
-};
-
 export default function CartPage() {
   const router = useRouter();
+  const form = useOrderForm();
   const lines = useCartStore((state) => state.lines);
   const clear = useCartStore((state) => state.clear);
   const totalAmount = useCartStore(selectCartTotal);
-  const [form, setForm] = useState<OrderFormModel>(EMPTY_FORM);
-  const [invalidFields, setInvalidFields] = useState<string[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [confirmValues, setConfirmValues] = useState<OrderFormValues | null>(null);
   const [submitError, setSubmitError] = useState('');
-  const [disabledDateReasons, setDisabledDateReasons] = useState<
-    Record<string, string>
-  >({});
+  const [promotionCode, setPromotionCode] = useState('');
+  const [appliedPromotionCode, setAppliedPromotionCode] = useState('');
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [promotionBaseAmount, setPromotionBaseAmount] = useState(0);
+  const [promotionBaseLineCount, setPromotionBaseLineCount] = useState(0);
+  const [promotionMessage, setPromotionMessage] = useState('');
   const dateOptions = useMemo(() => nextSevenDays(), []);
   const todayDateValue = dateOptions[0]?.value ?? '';
+  const scheduledDate = form.watch('scheduled_date');
 
-  useEffect(() => {
-    let active = true;
-    async function loadDisabledDates() {
-      if (lines.length === 0) {
-        if (active) setDisabledDateReasons({});
-        return;
+  const menuRulesQuery = useQuery({
+    queryKey: ['menu-rules'],
+    queryFn: async () => {
+      const response = await fetch('/api/menu', { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message ?? 'Không tải được dữ liệu món ăn.');
       }
-      try {
-        const response = await fetch('/api/menu', { cache: 'no-store' });
-        const data = await response.json();
-        if (!response.ok) return;
-        const menuItems = (data?.menuItems ?? []) as MenuRuleItem[];
-        const categories = (data?.categories ?? []) as CategoryRuleItem[];
-        const menuItemById = new Map(menuItems.map((item) => [item.id, item]));
-        const categoryById = new Map(
-          categories.map((category) => [category.id, category.slug ?? '']),
-        );
-        const selectedDates = new Set(dateOptions.map((option) => option.value));
-        const reasonsByDate = new Map<string, Set<string>>();
+      return (data?.menuItems ?? []) as MenuRuleItem[];
+    },
+    enabled: lines.length > 0,
+  });
 
-        for (const line of lines) {
-          const menuItem = menuItemById.get(line.itemId);
-          if (!menuItem) continue;
-          const isMainDishItem =
-            menuItem.is_main_dish === true ||
-            categoryById.get(menuItem.category_id ?? '') === 'lau';
-          if (!isMainDishItem) continue;
-          const itemLabel = menuItem.name;
-          const todayReason =
-            menuItem.block_today_reason?.trim() ||
-            `Món "${itemLabel}" đang tạm ngưng giao hôm nay.`;
-          if (menuItem.block_today && todayDateValue) {
-            const reasons = reasonsByDate.get(todayDateValue) ?? new Set<string>();
-            reasons.add(todayReason);
-            reasonsByDate.set(todayDateValue, reasons);
-          }
-          for (const blockedDate of menuItem.blocked_delivery_dates ?? []) {
-            if (!selectedDates.has(blockedDate)) continue;
-            const reasonForDate = menuItem.blocked_delivery_date_reasons?.[
-              blockedDate
-            ]?.trim();
-            const reasons = reasonsByDate.get(blockedDate) ?? new Set<string>();
-            reasons.add(
-              reasonForDate || `Món "${itemLabel}" không giao trong ngày này.`,
-            );
-            reasonsByDate.set(blockedDate, reasons);
-          }
-        }
+  const menuItemById = useMemo(
+    () => new Map((menuRulesQuery.data ?? []).map((item) => [item.id, item])),
+    [menuRulesQuery.data],
+  );
 
-        const nextReasons: Record<string, string> = {};
-        for (const [dateValue, reasons] of reasonsByDate.entries()) {
-          nextReasons[dateValue] = Array.from(reasons).join(' ');
-        }
-        if (active) setDisabledDateReasons(nextReasons);
-      } catch {
-        if (active) setDisabledDateReasons({});
+  const hasMainDish = useMemo(
+    () =>
+      lines.some((line) => menuItemById.get(line.itemId)?.is_main_dish === true),
+    [lines, menuItemById],
+  );
+  const isPromotionStale =
+    promotionBaseAmount !== totalAmount || promotionBaseLineCount !== lines.length;
+  const activePromotionCode = isPromotionStale ? '' : appliedPromotionCode;
+  const activeDiscountAmount = isPromotionStale ? 0 : discountAmount;
+
+  const disabledDateReasons = useMemo(() => {
+    if (lines.length === 0) return {};
+    const selectedDates = new Set(dateOptions.map((option) => option.value));
+    const reasonsByDate = new Map<string, Set<string>>();
+
+    for (const line of lines) {
+      const menuItem = menuItemById.get(line.itemId);
+      if (!menuItem || menuItem.is_main_dish !== true) continue;
+      const itemLabel = menuItem.name;
+      const todayReason =
+        menuItem.block_today_reason?.trim() ||
+        `Món "${itemLabel}" đang tạm ngưng giao hôm nay.`;
+      if (menuItem.block_today && todayDateValue) {
+        const reasons = reasonsByDate.get(todayDateValue) ?? new Set<string>();
+        reasons.add(todayReason);
+        reasonsByDate.set(todayDateValue, reasons);
+      }
+      for (const blockedDate of menuItem.blocked_delivery_dates ?? []) {
+        if (!selectedDates.has(blockedDate)) continue;
+        const reasonForDate = menuItem.blocked_delivery_date_reasons?.[
+          blockedDate
+        ]?.trim();
+        const reasons = reasonsByDate.get(blockedDate) ?? new Set<string>();
+        reasons.add(reasonForDate || `Món "${itemLabel}" không giao trong ngày này.`);
+        reasonsByDate.set(blockedDate, reasons);
       }
     }
-    loadDisabledDates();
-    return () => {
-      active = false;
-    };
-  }, [dateOptions, lines, todayDateValue]);
+
+    const nextReasons: Record<string, string> = {};
+    for (const [dateValue, reasons] of reasonsByDate.entries()) {
+      nextReasons[dateValue] = Array.from(reasons).join(' ');
+    }
+    return nextReasons;
+  }, [dateOptions, lines, menuItemById, todayDateValue]);
+
+  const createOrderMutation = useMutation({
+    mutationFn: async (values: OrderFormValues) => {
+      const session_id = sessionStore.getCurrent();
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          session_id,
+          customer_name: values.customer_name,
+          phone: values.phone,
+          email: values.email ?? null,
+          province: values.province,
+          district: values.district,
+          ward: values.ward,
+          address: values.address,
+          note: values.note || null,
+          website: values.website || null,
+          promotion_code: activePromotionCode || null,
+          scheduled_date: values.scheduled_date,
+          scheduled_slot: values.scheduled_slot,
+          items: lines.map((line) => ({
+            variant_id: line.variantId,
+            quantity: line.quantity,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Không thể tạo đơn hàng.');
+      return data as { orderId: string };
+    },
+    onSuccess: (data) => {
+      clear();
+      setShowConfirm(false);
+      router.push(`/orders/${data.orderId}`);
+    },
+    onError: (error) => {
+      setSubmitError(
+        error instanceof Error ? error.message : 'Không thể kết nối tới máy chủ.',
+      );
+    },
+  });
+
+  const applyPromotionMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const res = await fetch('/api/promotions/validate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code, order_amount: totalAmount }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        throw new Error(data?.message || 'Không thể áp dụng mã khuyến mãi.');
+      }
+      return data as {
+        code?: string;
+        discountAmount?: number;
+        message?: string;
+      };
+    },
+  });
 
   useEffect(() => {
-    if (!form.scheduledDate) return;
-    const blockedReason = disabledDateReasons[form.scheduledDate];
+    if (!scheduledDate) return;
+    const blockedReason = disabledDateReasons[scheduledDate];
     if (!blockedReason) return;
-    setForm((current) => ({ ...current, scheduledDate: '', scheduledSlot: '' }));
-    setSubmitError(blockedReason);
-  }, [disabledDateReasons, form.scheduledDate]);
+    form.setValue('scheduled_date', '');
+    form.setValue('scheduled_slot', '');
+    form.setError('scheduled_date', { type: 'manual', message: blockedReason });
+  }, [disabledDateReasons, form, scheduledDate]);
 
-  const validateBeforeConfirm = () => {
-    const required: Array<keyof OrderFormModel> = [
-      'customerName',
-      'phone',
-      'province',
-      'district',
-      'ward',
-      'address',
-      'scheduledDate',
-      'scheduledSlot',
-    ];
-    const failed = required.filter((field) => !form[field]?.trim());
-    setInvalidFields(failed as string[]);
+  const validateBeforeConfirm = async () => {
     if (lines.length === 0) {
       setSubmitError('Giỏ hàng đang trống.');
       return false;
     }
-    if (failed.length > 0) {
+    const isValid = await form.trigger();
+    if (!isValid) {
       setSubmitError('Vui lòng nhập đầy đủ thông tin bắt buộc.');
       return false;
     }
-    const blockedReason = disabledDateReasons[form.scheduledDate];
+    const values = form.getValues();
+    const blockedReason = disabledDateReasons[values.scheduled_date];
     if (blockedReason) {
       setSubmitError(blockedReason);
       return false;
@@ -181,44 +221,43 @@ export default function CartPage() {
     return true;
   };
 
-  const submitOrder = async () => {
-    setSubmitting(true);
+  const submitOrder = () => {
+    if (!confirmValues) return;
     setSubmitError('');
+    createOrderMutation.mutate(confirmValues);
+  };
+
+  const applyPromotionCode = async () => {
+    const nextCode = promotionCode.trim().toUpperCase();
+    if (!nextCode) {
+      setPromotionMessage('Vui lòng nhập mã khuyến mãi.');
+      setAppliedPromotionCode('');
+      setDiscountAmount(0);
+      return;
+    }
+    if (totalAmount <= 0) {
+      setPromotionMessage('Giỏ hàng đang trống.');
+      return;
+    }
+    if (!hasMainDish) {
+      setPromotionMessage('Cần có món chính trong giỏ hàng để áp dụng mã khuyến mãi.');
+      return;
+    }
+    setPromotionMessage('');
     try {
-      const sessionId = sessionStore.getCurrent();
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          customerName: form.customerName,
-          phone: form.phone,
-          province: form.province,
-          district: form.district,
-          ward: form.ward,
-          address: form.address,
-          note: form.note || null,
-          website: form.website || null,
-          scheduledDate: form.scheduledDate,
-          scheduledSlot: form.scheduledSlot,
-          items: lines.map((line) => ({
-            variantId: line.variantId,
-            quantity: line.quantity,
-          })),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSubmitError(data?.message || 'Không thể tạo đơn hàng.');
-        return;
-      }
-      clear();
-      setShowConfirm(false);
-      router.push(`/orders/${data.orderId}`);
+      const data = await applyPromotionMutation.mutateAsync(nextCode);
+      setPromotionCode(nextCode);
+      setAppliedPromotionCode(data.code ?? nextCode);
+      setDiscountAmount(Number(data.discountAmount) || 0);
+      setPromotionBaseAmount(totalAmount);
+      setPromotionBaseLineCount(lines.length);
+      setPromotionMessage(
+        data?.message || 'Áp dụng mã khuyến mãi thành công.',
+      );
     } catch {
-      setSubmitError('Không thể kết nối tới máy chủ.');
-    } finally {
-      setSubmitting(false);
+      setAppliedPromotionCode('');
+      setDiscountAmount(0);
+      setPromotionMessage('Không thể kết nối tới máy chủ.');
     }
   };
 
@@ -235,22 +274,57 @@ export default function CartPage() {
           <section className="card-surface p-4">
             <h2 className="mb-4 text-xl font-semibold">Thông tin đặt hàng</h2>
             <OrderForm
-              model={form}
-              onChange={setForm}
+              form={form}
               dateOptions={dateOptions}
-              slotOptions={SLOT_OPTIONS}
+              slotOptions={SCHEDULED_SLOT_OPTIONS}
               disabledDateReasons={disabledDateReasons}
-              submitting={submitting}
-              invalidFields={invalidFields}
+              submitting={createOrderMutation.isPending}
             />
             {submitError ? (
               <p className="mt-3 text-sm text-destructive">{submitError}</p>
             ) : null}
+            <div className="mt-4 rounded-xl border border-border p-3">
+              <p className="text-sm font-medium">Mã khuyến mãi</p>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={promotionCode}
+                  onChange={(event) => setPromotionCode(event.target.value)}
+                  placeholder="Nhập mã (VD: KHAITRUONG20)"
+                  className="uppercase"
+                  disabled={!hasMainDish}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={applyPromotionCode}
+                  disabled={applyPromotionMutation.isPending || !hasMainDish}
+                >
+                  {applyPromotionMutation.isPending ? 'Đang kiểm tra...' : 'Áp dụng'}
+                </Button>
+              </div>
+              {!hasMainDish ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Cần có món chính trong giỏ hàng để sử dụng mã khuyến mãi.
+                </p>
+              ) : null}
+              {promotionMessage ? (
+                <p className="mt-2 text-xs text-muted-foreground">{promotionMessage}</p>
+              ) : null}
+              {activeDiscountAmount > 0 ? (
+                <p className="mt-1 text-sm text-primary">
+                  Giảm giá{activePromotionCode ? ` (${activePromotionCode})` : ''}: -{' '}
+                  {formatCurrency(activeDiscountAmount)}
+                </p>
+              ) : null}
+            </div>
             <Button
               type="button"
               className="mt-4 w-full"
-              onClick={() => {
-                if (validateBeforeConfirm()) setShowConfirm(true);
+              onClick={async () => {
+                if (await validateBeforeConfirm()) {
+                  setConfirmValues(form.getValues());
+                  setShowConfirm(true);
+                }
               }}
             >
               Xác nhận đặt món
@@ -262,17 +336,21 @@ export default function CartPage() {
       <BottomNav />
       <OrderConfirmModal
         open={showConfirm}
-        form={form}
+        form={confirmValues ?? form.getValues()}
         lines={lines}
         totalAmount={totalAmount}
+        discountAmount={activeDiscountAmount}
+        promotionCode={activePromotionCode}
         scheduledDateLabel={
-          dateOptions.find((entry) => entry.value === form.scheduledDate)?.label
-        }
-        scheduledSlotLabel={
-          SLOT_OPTIONS.find((entry) => entry.value === form.scheduledSlot)
+          dateOptions.find((entry) => entry.value === (confirmValues?.scheduled_date ?? ''))
             ?.label
         }
-        submitting={submitting}
+        scheduledSlotLabel={
+          SCHEDULED_SLOT_OPTIONS.find(
+            (entry) => entry.value === (confirmValues?.scheduled_slot ?? ''),
+          )?.label
+        }
+        submitting={createOrderMutation.isPending}
         onCancel={() => setShowConfirm(false)}
         onConfirm={submitOrder}
       />

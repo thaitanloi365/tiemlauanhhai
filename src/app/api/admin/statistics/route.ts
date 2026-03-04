@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
 import { mockDb } from '@/lib/server/mock-db';
-import type { Order } from '@/lib/types';
+import { APP_TIMEZONE, currentYearInTz, parseInTz } from '@/lib/date';
 import { resolveAdminUserFromRequest } from '@/lib/server/next-admin';
 
 type OrderStatsRow = Pick<
-  Order,
+  AppTypes.Order,
   'id' | 'total_amount' | 'created_at' | 'status' | 'district' | 'ward'
 >;
 
 function parseYear(value: string | null) {
-  const currentYear = new Date().getFullYear();
+  const currentYear = currentYearInTz();
   if (!value) return currentYear;
   const year = Number(value);
   return Number.isInteger(year) && year >= 2020 && year <= 2100
@@ -25,14 +25,8 @@ function parseMonth(value: string | null): number | null {
 }
 
 function getVietnamYearMonth(isoDate: string) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    year: 'numeric',
-    month: 'numeric',
-  }).formatToParts(new Date(isoDate));
-  const year = Number(parts.find((part) => part.type === 'year')?.value ?? 0);
-  const month = Number(parts.find((part) => part.type === 'month')?.value ?? 0);
-  return { year, month };
+  const parsed = parseInTz(isoDate, APP_TIMEZONE);
+  return { year: parsed.year(), month: parsed.month() + 1 };
 }
 
 function aggregateStatistics(

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getMenuData } from '@/lib/server/menu';
+import { now as dayjsNow } from '@/lib/date';
 
 function getSiteUrl() {
   const siteUrl =
@@ -9,7 +10,7 @@ function getSiteUrl() {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
-  const now = new Date();
+  const now = dayjsNow().toDate();
   const { menuItems } = await getMenuData();
 
   const itemRoutes: MetadataRoute.Sitemap = menuItems.map((item) => ({

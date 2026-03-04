@@ -10,6 +10,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { EmployeeForm } from '@/components/admin/employee-form';
+import { formatDateTimeVi } from '@/lib/date';
 import { Button } from '@/components/ui/button';
 
 type Employee = {
@@ -74,8 +75,7 @@ export default function AdminEmployeesPage() {
       {
         accessorKey: 'created_at',
         header: 'Ngày tạo',
-        cell: ({ row }) =>
-          new Date(row.original.created_at).toLocaleString('vi-VN'),
+        cell: ({ row }) => formatDateTimeVi(row.original.created_at),
       },
       {
         id: 'actions',

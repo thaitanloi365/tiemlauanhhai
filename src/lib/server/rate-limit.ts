@@ -3,6 +3,7 @@ type RateLimitRule = {
   windowMs: number;
   keyPrefix: string;
 };
+import { now as dayjsNow } from '@/lib/date';
 
 type RateLimitResult = {
   ok: boolean;
@@ -78,7 +79,7 @@ export function consumeIpRateLimit(input: {
   const rule = resolveRule(input.pathname, method);
   if (!rule) return null;
 
-  const now = input.now ?? Date.now();
+  const now = input.now ?? dayjsNow().valueOf();
   cleanup(now);
 
   const windowStart = now - rule.windowMs;

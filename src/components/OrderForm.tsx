@@ -1,6 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm, type UseFormReturn } from 'react-hook-form';
+import { z } from 'zod';
 import { HCM_DISTRICTS_NEW } from '@/lib/data/hcm-districts-new';
 import { HCM_DISTRICTS_OLD } from '@/lib/data/hcm-districts-old';
 import { HCM_WARDS_NEW } from '@/lib/data/hcm-wards-new';
@@ -27,41 +30,65 @@ import { Textarea } from '@/components/ui/textarea';
 
 type AddressMode = 'old' | 'new';
 
-export type OrderFormModel = {
-  customerName: string;
-  phone: string;
-  website: string;
-  province: string;
-  district: string;
-  ward: string;
-  address: string;
-  note: string;
-  scheduledDate: string;
-  scheduledSlot: string;
+export const order_form_schema = z.object({
+  customer_name: z.string().trim().min(2, 'Họ tên cần ít nhất 2 ký tự').max(120),
+  phone: z.string().trim().min(1, 'Vui lòng nhập số điện thoại'),
+  email: z.string().trim().email('Email không hợp lệ').nullable().optional(),
+  website: z.string().trim().max(200),
+  province: z.string().trim().min(1, 'Vui lòng chọn Tỉnh/Thành'),
+  district: z.string().trim().min(1, 'Vui lòng chọn Quận/Huyện'),
+  ward: z.string().trim().min(1, 'Vui lòng chọn Phường/Xã'),
+  address: z.string().trim().min(5, 'Vui lòng nhập địa chỉ chi tiết'),
+  note: z.string(),
+  scheduled_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày nhận món không hợp lệ'),
+  scheduled_slot: z.string().trim().min(1, 'Vui lòng chọn khung giờ'),
+});
+
+export type OrderFormValues = z.infer<typeof order_form_schema>;
+
+export const ORDER_FORM_DEFAULT_VALUES: OrderFormValues = {
+  customer_name: '',
+  phone: '',
+  email: null,
+  website: '',
+  province: HCMC_PROVINCE_NAME,
+  district: '',
+  ward: '',
+  address: '',
+  note: '',
+  scheduled_date: '',
+  scheduled_slot: '',
 };
 
+export function useOrderForm() {
+  return useForm<OrderFormValues>({
+    resolver: zodResolver(order_form_schema),
+    defaultValues: ORDER_FORM_DEFAULT_VALUES,
+  });
+}
+
 type Props = {
-  model: OrderFormModel;
-  onChange: (value: OrderFormModel) => void;
+  form: UseFormReturn<OrderFormValues>;
   dateOptions: { value: string; label: string }[];
   slotOptions: { value: string; label: string }[];
   disabledDateReasons?: Record<string, string>;
   submitting?: boolean;
-  invalidFields?: string[];
 };
 
 const baseInputClass =
   'w-full rounded-xl border bg-background px-3 py-2 text-sm';
 
 export function OrderForm({
-  model,
-  onChange,
+  form,
   dateOptions,
   slotOptions,
   disabledDateReasons = {},
   submitting = false,
-  invalidFields = [],
 }: Props) {
+  const { register, control, watch, setValue, formState } = form;
+  const values = watch();
   const [addressMode, setAddressMode] = useState<AddressMode>('old');
   const [selectedProvinceCode, setSelectedProvinceCode] =
     useState(HCMC_PROVINCE_CODE);
@@ -71,7 +98,10 @@ export function OrderForm({
     addressMode === 'old' ? HCM_DISTRICTS_OLD : HCM_DISTRICTS_NEW;
   const wardMap = addressMode === 'old' ? HCM_WARDS_OLD : HCM_WARDS_NEW;
   const isHcmProvince = selectedProvinceCode === HCMC_PROVINCE_CODE;
-  const wards = wardMap[model.district] ?? [];
+  const wards = useMemo(
+    () => wardMap[values.district] ?? [],
+    [values.district, wardMap],
+  );
 
   const provinceOptions = useMemo(
     () =>
@@ -99,8 +129,9 @@ export function OrderForm({
     [wards],
   );
 
-  const isInvalid = (field: string) => invalidFields.includes(field);
-  const inputClass = (field: string) =>
+  const isInvalid = (field: keyof OrderFormValues) =>
+    Boolean(formState.errors[field]);
+  const inputClass = (field: keyof OrderFormValues) =>
     `${baseInputClass} ${isInvalid(field) ? 'border-destructive' : 'border-input'}`;
   const blockedDateEntries = Object.entries(disabledDateReasons);
   const blockedDateDetails = dateOptions
@@ -109,13 +140,6 @@ export function OrderForm({
       label: option.label,
       reason: disabledDateReasons[option.value],
     }));
-
-  const setField = <K extends keyof OrderFormModel>(
-    key: K,
-    value: OrderFormModel[K],
-  ) => {
-    onChange({ ...model, [key]: value });
-  };
 
   return (
     <div className="space-y-5">
@@ -127,12 +151,15 @@ export function OrderForm({
           <div className="text-sm">
             <Label className="mb-1 block">Ngày nhận món *</Label>
             <Select
-              value={model.scheduledDate || 'none'}
+              value={values.scheduled_date || 'none'}
               onValueChange={(value) =>
-                setField('scheduledDate', value === 'none' ? '' : value)
+                setValue('scheduled_date', value === 'none' ? '' : value, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
               }
             >
-              <SelectTrigger className={inputClass('scheduledDate')}>
+              <SelectTrigger className={inputClass('scheduled_date')}>
                 <SelectValue placeholder="Chọn ngày nhận món" />
               </SelectTrigger>
               <SelectContent>
@@ -164,12 +191,15 @@ export function OrderForm({
           <div className="text-sm">
             <Label className="mb-1 block">Khung giờ nhận món *</Label>
             <Select
-              value={model.scheduledSlot || 'none'}
+              value={values.scheduled_slot || 'none'}
               onValueChange={(value) =>
-                setField('scheduledSlot', value === 'none' ? '' : value)
+                setValue('scheduled_slot', value === 'none' ? '' : value, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
               }
             >
-              <SelectTrigger className={inputClass('scheduledSlot')}>
+              <SelectTrigger className={inputClass('scheduled_slot')}>
                 <SelectValue placeholder="Chọn khung giờ" />
               </SelectTrigger>
               <SelectContent>
@@ -193,17 +223,38 @@ export function OrderForm({
           <div className="text-sm">
             <Label className="mb-1 block">Họ tên *</Label>
             <Input
-              className={inputClass('customerName')}
-              value={model.customerName}
-              onChange={(event) => setField('customerName', event.target.value)}
+              className={inputClass('customer_name')}
+              {...register('customer_name')}
             />
           </div>
           <div className="text-sm">
             <Label className="mb-1 block">SĐT *</Label>
-            <PhoneInput
-              value={model.phone}
-              onChange={(value) => setField('phone', value)}
-              invalid={isInvalid('phone')}
+            <Controller
+              control={control}
+              name="phone"
+              render={({ field }) => (
+                <PhoneInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  invalid={isInvalid('phone')}
+                />
+              )}
+            />
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="text-sm">
+            <Label className="mb-1 block">Email</Label>
+            <Input
+              type="email"
+              className={inputClass('email')}
+              value={values.email ?? ''}
+              onChange={(event) =>
+                setValue('email', event.target.value.trim() || null, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
             />
           </div>
         </div>
@@ -220,12 +271,9 @@ export function OrderForm({
             onClick={() => {
               setAddressMode('old');
               setSelectedProvinceCode(HCMC_PROVINCE_CODE);
-              onChange({
-                ...model,
-                province: HCMC_PROVINCE_NAME,
-                district: '',
-                ward: '',
-              });
+              setValue('province', HCMC_PROVINCE_NAME);
+              setValue('district', '');
+              setValue('ward', '');
             }}
           >
             Địa chỉ cũ
@@ -236,12 +284,9 @@ export function OrderForm({
             onClick={() => {
               setAddressMode('new');
               setSelectedProvinceCode(HCMC_PROVINCE_CODE);
-              onChange({
-                ...model,
-                province: HCMC_PROVINCE_NAME,
-                district: '',
-                ward: '',
-              });
+              setValue('province', HCMC_PROVINCE_NAME);
+              setValue('district', '');
+              setValue('ward', '');
             }}
           >
             Địa chỉ mới
@@ -257,12 +302,9 @@ export function OrderForm({
                 setSelectedProvinceCode(code);
                 const provinceName =
                   provinces.find((entry) => entry.code === code)?.name || '';
-                onChange({
-                  ...model,
-                  province: provinceName,
-                  district: '',
-                  ward: '',
-                });
+                setValue('province', provinceName);
+                setValue('district', '');
+                setValue('ward', '');
               }}
               placeholder="Chọn Thành phố/Tỉnh"
               className={inputClass('province')}
@@ -271,11 +313,15 @@ export function OrderForm({
           <div className="text-sm">
             <Label className="mb-1 block">Quận/Huyện *</Label>
             <SelectSearch
-              value={model.district}
+              value={values.district}
               options={districtOptions}
-              onChange={(district) =>
-                onChange({ ...model, district, ward: '' })
-              }
+              onChange={(district) => {
+                setValue('district', district, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+                setValue('ward', '', { shouldDirty: true, shouldValidate: true });
+              }}
               placeholder="Chọn Quận/Huyện"
               disabled={!isHcmProvince}
               className={inputClass('district')}
@@ -286,11 +332,13 @@ export function OrderForm({
           <div className="text-sm">
             <Label className="mb-1 block">Phường *</Label>
             <SelectSearch
-              value={model.ward}
+              value={values.ward}
               options={wardOptions}
-              onChange={(ward) => setField('ward', ward)}
+              onChange={(ward) =>
+                setValue('ward', ward, { shouldDirty: true, shouldValidate: true })
+              }
               placeholder="Chọn Phường"
-              disabled={!isHcmProvince || !model.district}
+              disabled={!isHcmProvince || !values.district}
               className={inputClass('ward')}
             />
           </div>
@@ -298,8 +346,7 @@ export function OrderForm({
             <Label className="mb-1 block">Số nhà, tên đường *</Label>
             <Input
               className={inputClass('address')}
-              value={model.address}
-              onChange={(event) => setField('address', event.target.value)}
+              {...register('address')}
             />
           </div>
         </div>
@@ -315,8 +362,7 @@ export function OrderForm({
           <Label className="mb-1 block">Ghi chú</Label>
           <Textarea
             className={`${baseInputClass} border-input h-24`}
-            value={model.note}
-            onChange={(event) => setField('note', event.target.value)}
+            {...register('note')}
           />
         </div>
         <div
@@ -326,8 +372,7 @@ export function OrderForm({
           <div>
             Website
             <Input
-              value={model.website}
-              onChange={(event) => setField('website', event.target.value)}
+              {...register('website')}
               autoComplete="off"
               tabIndex={-1}
             />

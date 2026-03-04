@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { StateStorage } from 'zustand/middleware';
+import { now as dayjsNow } from '@/lib/date';
 
 const SESSION_KEY = 'tiemlauanhhai_session_id';
 
@@ -18,7 +19,7 @@ function generateSessionId() {
   ) {
     return crypto.randomUUID();
   }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${dayjsNow().valueOf()}-${Math.random().toString(16).slice(2)}`;
 }
 
 export const useSessionStore = create<SessionState>()(

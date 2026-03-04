@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { format, isValid, parse } from 'date-fns';
 import { CalendarDays } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { formatDateOnlyInTz, parseDateOnlyInTz, parseInTz } from '@/lib/date';
 import { formatCurrencyInput, parseCurrencyInput } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -98,8 +98,8 @@ function toBlockedDateRules(
 }
 
 function parseBlockedDate(value: string) {
-  const parsed = parse(value, 'yyyy-MM-dd', new Date());
-  return isValid(parsed) ? parsed : undefined;
+  const parsed = parseDateOnlyInTz(value);
+  return parsed.isValid() ? parsed.toDate() : undefined;
 }
 
 const variantFormSchema = z.object({
@@ -628,7 +628,7 @@ export function MenuItemForm({
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
                                 {selectedDate
-                                  ? format(selectedDate, 'dd/MM/yyyy')
+                                  ? parseInTz(selectedDate).format('DD/MM/YYYY')
                                   : 'Chọn ngày'}
                               </Button>
                             </PopoverTrigger>
@@ -638,10 +638,12 @@ export function MenuItemForm({
                                 selected={selectedDate}
                                 onSelect={(date) =>
                                   dateField.onChange(
-                                    date ? format(date, 'yyyy-MM-dd') : '',
+                                    date ? formatDateOnlyInTz(date) : '',
                                   )
                                 }
-                                disabled={{ before: new Date(1970, 0, 1) }}
+                                disabled={{
+                                  before: parseDateOnlyInTz('1970-01-01').toDate(),
+                                }}
                               />
                             </PopoverContent>
                           </Popover>

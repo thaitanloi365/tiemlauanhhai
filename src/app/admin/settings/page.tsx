@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { changePasswordSchema } from '@/lib/utils/validation';
+import { changePasswordSchema } from '@/lib/schemas';
 import { strongPasswordGuideline } from '@/lib/utils/password-policy';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +12,11 @@ import { Label } from '@/components/ui/label';
 
 const changePasswordFormSchema = changePasswordSchema
   .extend({
-    confirmPassword: z.string().min(1, 'Vui lòng xác nhận mật khẩu mới'),
+    confirm_password: z.string().min(1, 'Vui lòng xác nhận mật khẩu mới'),
   })
-  .refine((payload) => payload.newPassword === payload.confirmPassword, {
+  .refine((payload) => payload.new_password === payload.confirm_password, {
     message: 'Mật khẩu xác nhận không khớp.',
-    path: ['confirmPassword'],
+    path: ['confirm_password'],
   });
 
 type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>;
@@ -32,9 +32,9 @@ export default function AdminSettingsPage() {
   } = useForm<ChangePasswordFormValues>({
     resolver: zodResolver(changePasswordFormSchema),
     defaultValues: {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
+      current_password: '',
+      new_password: '',
+      confirm_password: '',
     },
   });
 
@@ -45,8 +45,8 @@ export default function AdminSettingsPage() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          currentPassword: values.currentPassword,
-          newPassword: values.newPassword,
+          current_password: values.current_password,
+          new_password: values.new_password,
         }),
       });
       const data = await res.json();
@@ -86,11 +86,11 @@ export default function AdminSettingsPage() {
             <Input
               type="password"
               placeholder="••••••••"
-              {...register('currentPassword')}
+              {...register('current_password')}
             />
-            {errors.currentPassword?.message ? (
+            {errors.current_password?.message ? (
               <p className="text-xs text-destructive">
-                {errors.currentPassword.message}
+                {errors.current_password.message}
               </p>
             ) : null}
           </div>
@@ -99,14 +99,14 @@ export default function AdminSettingsPage() {
             <Input
               type="password"
               placeholder="Tối thiểu 8 ký tự"
-              {...register('newPassword')}
+              {...register('new_password')}
             />
             <span className="text-xs text-muted-foreground">
               {strongPasswordGuideline}
             </span>
-            {errors.newPassword?.message ? (
+            {errors.new_password?.message ? (
               <p className="text-xs text-destructive">
-                {errors.newPassword.message}
+                {errors.new_password.message}
               </p>
             ) : null}
           </div>
@@ -115,11 +115,11 @@ export default function AdminSettingsPage() {
             <Input
               type="password"
               placeholder="Nhập lại mật khẩu mới"
-              {...register('confirmPassword')}
+              {...register('confirm_password')}
             />
-            {errors.confirmPassword?.message ? (
+            {errors.confirm_password?.message ? (
               <p className="text-xs text-destructive">
-                {errors.confirmPassword.message}
+                {errors.confirm_password.message}
               </p>
             ) : null}
           </div>

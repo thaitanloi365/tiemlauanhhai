@@ -1,13 +1,12 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { StateStorage } from 'zustand/middleware';
-import type { CartLine } from '@/lib/types';
 
 const STORAGE_KEY = 'tiemlauanhhai_cart';
 
 type CartState = {
-  lines: CartLine[];
-  add: (line: Omit<CartLine, 'quantity'>, quantity?: number) => void;
+  lines: AppTypes.CartLine[];
+  add: (line: Omit<AppTypes.CartLine, 'quantity'>, quantity?: number) => void;
   updateQuantity: (variantId: string, quantity: number) => void;
   remove: (variantId: string) => void;
   clear: () => void;
@@ -73,7 +72,7 @@ export const useCartStore = create<CartState>()(
 
 // Compatibility object so existing call sites can keep cartStore.add/update/remove/clear.
 export const cartStore = {
-  add: (line: Omit<CartLine, 'quantity'>, quantity = 1) =>
+  add: (line: Omit<AppTypes.CartLine, 'quantity'>, quantity = 1) =>
     useCartStore.getState().add(line, quantity),
   updateQuantity: (variantId: string, quantity: number) =>
     useCartStore.getState().updateQuantity(variantId, quantity),

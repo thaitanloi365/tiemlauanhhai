@@ -1,17 +1,17 @@
 import { sampleCategories, sampleMenuItems } from '@/lib/sample-data';
-import type { Category, MenuItem, Order, OrderItem, Review } from '@/lib/types';
+import { toIso } from '@/lib/date';
 
-const mockOrders: Order[] = [];
-const mockOrderItems: OrderItem[] = [];
+const mockOrders: AppTypes.Order[] = [];
+const mockOrderItems: AppTypes.OrderItem[] = [];
 const mockOrderLogs: {
   id: string;
   order_id: string;
   status: string;
   created_at: string;
 }[] = [];
-const mockReviews: Review[] = [];
-const mockCategories: Category[] = [...sampleCategories];
-const mockMenuItems: MenuItem[] = [...sampleMenuItems];
+const mockReviews: AppTypes.Review[] = [];
+const mockCategories: AppTypes.Category[] = [...sampleCategories];
+const mockMenuItems: AppTypes.MenuItem[] = [...sampleMenuItems];
 
 export const mockDb = {
   getAllOrders() {
@@ -57,35 +57,35 @@ export const mockDb = {
   getMenuDataSnapshot() {
     return { categories: [...mockCategories], menuItems: [...mockMenuItems] };
   },
-  createOrder(order: Order, items: OrderItem[]) {
+  createOrder(order: AppTypes.Order, items: AppTypes.OrderItem[]) {
     mockOrders.unshift(order);
     mockOrderItems.push(...items);
     mockOrderLogs.push({
       id: crypto.randomUUID(),
       order_id: order.id,
       status: order.status,
-      created_at: new Date().toISOString(),
+      created_at: toIso(),
     });
   },
-  updateOrder(orderId: string, updates: Partial<Order>) {
+  updateOrder(orderId: string, updates: Partial<AppTypes.Order>) {
     const idx = mockOrders.findIndex((entry) => entry.id === orderId);
     if (idx < 0) return null;
     mockOrders[idx] = {
       ...mockOrders[idx],
       ...updates,
-      updated_at: new Date().toISOString(),
+      updated_at: toIso(),
     };
     if (updates.status) {
       mockOrderLogs.push({
         id: crypto.randomUUID(),
         order_id: orderId,
         status: updates.status,
-        created_at: new Date().toISOString(),
+        created_at: toIso(),
       });
     }
     return mockOrders[idx];
   },
-  createReview(review: Review) {
+  createReview(review: AppTypes.Review) {
     const existed = mockReviews.find(
       (entry) => entry.order_id === review.order_id,
     );

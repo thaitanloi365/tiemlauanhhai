@@ -1,11 +1,10 @@
-import type { Category, MenuItem } from '@/lib/types';
 const MENU_IMAGE = '/logo.png';
 
 const lauCategoryId = '00000000-0000-0000-0000-000000000001';
 const toppingCategoryId = '00000000-0000-0000-0000-000000000002';
 const drinkCategoryId = '00000000-0000-0000-0000-000000000003';
 
-export const sampleCategories: Category[] = [
+export const sampleCategories: AppTypes.Category[] = [
   { id: lauCategoryId, name: 'Lẩu', slug: 'lau', sort_order: 1 },
   { id: toppingCategoryId, name: 'Gọi Thêm', slug: 'topping', sort_order: 2 },
   { id: drinkCategoryId, name: 'Đồ Uống', slug: 'do-uong', sort_order: 3 },
@@ -29,7 +28,7 @@ const drinkList: Array<[string, number]> = [
   ['Nước suối', 10000],
 ];
 
-export const sampleMenuItems: MenuItem[] = [
+export const sampleMenuItems: AppTypes.MenuItem[] = [
   {
     id: '10000000-0000-0000-0000-000000000001',
     category_id: lauCategoryId,

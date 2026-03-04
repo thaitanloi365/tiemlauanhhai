@@ -14,6 +14,8 @@ import {
   YAxis,
 } from 'recharts';
 import { formatCurrency, statusLabel } from '@/lib/utils/format';
+import { currentYearInTz } from '@/lib/date';
+import { ORDER_STATUS_OPTIONS } from '@/lib/constants/order';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -53,40 +55,35 @@ const MONTH_OPTIONS = [{ label: 'Cả năm', value: '' }].concat(
 
 const STATUS_OPTIONS = [
   { label: 'Tất cả trạng thái', value: '' },
-  { label: 'Chờ xác nhận', value: 'pending' },
-  { label: 'Đã xác nhận', value: 'confirmed' },
-  { label: 'Đang chuẩn bị', value: 'preparing' },
-  { label: 'Đang giao', value: 'shipping' },
-  { label: 'Đã giao', value: 'delivered' },
-  { label: 'Đã hủy', value: 'cancelled' },
+  ...ORDER_STATUS_OPTIONS,
 ];
 
 export default function AdminStatisticsPage() {
-  const currentYear = new Date().getFullYear();
+  const currentYear = currentYearInTz();
   const yearOptions = useMemo(
     () => Array.from({ length: 6 }, (_, index) => String(currentYear - index)),
     [currentYear],
   );
   const [areaTab, setAreaTab] = useState<'district' | 'ward'>('district');
-  const [filters, setFilters] = useQueryStates({
-    year: parseAsString.withDefault(String(currentYear)),
-    month: parseAsString.withDefault(''),
-    status: parseAsString.withDefault(''),
+  const [f, setF] = useQueryStates({
+    y: parseAsString.withDefault(String(currentYear)),
+    m: parseAsString.withDefault(''),
+    s: parseAsString.withDefault(''),
   });
 
   const statisticsQuery = useQuery({
     queryKey: [
       'admin',
       'statistics',
-      filters.year,
-      filters.month,
-      filters.status,
+      f.y,
+      f.m,
+      f.s,
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters.year) params.set('year', filters.year);
-      if (filters.month) params.set('month', filters.month);
-      if (filters.status) params.set('status', filters.status);
+      if (f.y) params.set('year', f.y);
+      if (f.m) params.set('month', f.m);
+      if (f.s) params.set('status', f.s);
       const response = await fetch(
         `/api/admin/statistics?${params.toString()}`,
       );
@@ -136,8 +133,8 @@ export default function AdminStatisticsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Select
-            value={filters.year}
-            onValueChange={(value) => setFilters({ year: value })}
+            value={f.y}
+            onValueChange={(value) => setF({ y: value })}
           >
             <SelectTrigger className="w-[140px]">
               <SelectValue />
@@ -151,9 +148,9 @@ export default function AdminStatisticsPage() {
             </SelectContent>
           </Select>
           <Select
-            value={filters.month || 'all-month'}
+            value={f.m || 'all-month'}
             onValueChange={(value) =>
-              setFilters({ month: value === 'all-month' ? '' : value })
+              setF({ m: value === 'all-month' ? '' : value })
             }
           >
             <SelectTrigger className="w-[140px]">
@@ -171,9 +168,9 @@ export default function AdminStatisticsPage() {
             </SelectContent>
           </Select>
           <Select
-            value={filters.status || 'all-status'}
+            value={f.s || 'all-status'}
             onValueChange={(value) =>
-              setFilters({ status: value === 'all-status' ? '' : value })
+              setF({ s: value === 'all-status' ? '' : value })
             }
           >
             <SelectTrigger className="w-[220px]">
@@ -301,10 +298,10 @@ export default function AdminStatisticsPage() {
         )}
       </section>
 
-      {filters.status ? (
+      {f.s ? (
         <p className="text-sm text-muted-foreground">
           Đang lọc theo trạng thái:{' '}
-          <strong>{statusLabel(filters.status)}</strong>.
+          <strong>{statusLabel(f.s)}</strong>.
         </p>
       ) : null}
     </div>

@@ -7,15 +7,15 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { BottomNav } from '@/components/BottomNav';
 import { ReviewForm } from '@/components/ReviewForm';
+import { formatDateTimeVi } from '@/lib/date';
 import { sessionStore } from '@/lib/stores/session';
 import { formatCurrency, statusClass, statusLabel } from '@/lib/utils/format';
-import type { Order, OrderItem, Review } from '@/lib/types';
 
 type OrderDetailResponse = {
-  order: Order;
-  items: OrderItem[];
+  order: AppTypes.Order;
+  items: AppTypes.OrderItem[];
   logs: Array<{ id: string; status: string; created_at: string }>;
-  review: Review | null;
+  review: AppTypes.Review | null;
 };
 
 export default function OrderDetailPage() {
@@ -44,8 +44,8 @@ export default function OrderDetailPage() {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        sessionId,
-        orderId: params.id,
+        session_id: sessionId,
+        order_id: params.id,
         rating,
         comment,
       }),
@@ -59,6 +59,9 @@ export default function OrderDetailPage() {
       queryKey: ['order-detail', params.id, sessionId],
     });
   };
+
+  const discountAmount = Math.max(0, data?.order.discount_amount ?? 0);
+  const payableAmount = Math.max(0, (data?.order.total_amount ?? 0) - discountAmount);
 
   return (
     <>
@@ -90,10 +93,18 @@ export default function OrderDetailPage() {
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {new Date(data.order.created_at).toLocaleString('vi-VN')}
+                  {formatDateTimeVi(data.order.created_at)}
                 </p>
                 <p className="mt-2 font-semibold">
-                  Tổng tiền: {formatCurrency(data.order.total_amount)}
+                  Tổng tiền món: {formatCurrency(data.order.total_amount)}
+                </p>
+                {discountAmount > 0 ? (
+                  <p className="mt-1 font-semibold text-primary">
+                    Giảm giá: - {formatCurrency(discountAmount)}
+                  </p>
+                ) : null}
+                <p className="mt-1 font-semibold">
+                  Thành tiền sau giảm: {formatCurrency(payableAmount)}
                 </p>
               </section>
               <section className="card-surface p-4">
@@ -130,7 +141,7 @@ export default function OrderDetailPage() {
                     >
                       <span>{statusLabel(log.status)}</span>
                       <span className="text-muted-foreground">
-                        {new Date(log.created_at).toLocaleString('vi-VN')}
+                        {formatDateTimeVi(log.created_at)}
                       </span>
                     </div>
                   ))}

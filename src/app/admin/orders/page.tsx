@@ -18,6 +18,8 @@ import {
   statusBadgeVariant,
   statusLabel,
 } from '@/lib/utils/format';
+import { ORDER_STATUS_OPTIONS } from '@/lib/constants/order';
+import { formatDateTimeVi } from '@/lib/date';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -40,26 +42,21 @@ type AdminOrder = {
 
 const STATUS_OPTIONS = [
   { label: 'Tất cả trạng thái', value: '' },
-  { label: 'Chờ xác nhận', value: 'pending' },
-  { label: 'Đã xác nhận', value: 'confirmed' },
-  { label: 'Đang chuẩn bị', value: 'preparing' },
-  { label: 'Đang giao', value: 'shipping' },
-  { label: 'Đã giao', value: 'delivered' },
-  { label: 'Đã hủy', value: 'cancelled' },
+  ...ORDER_STATUS_OPTIONS,
 ];
 
 export default function AdminOrdersPage() {
-  const [filters, setFilters] = useQueryStates({
-    status: parseAsString.withDefault(''),
+  const [f, setF] = useQueryStates({
+    s: parseAsString.withDefault(''),
     q: parseAsString.withDefault(''),
   });
 
   const ordersQuery = useQuery({
-    queryKey: ['admin', 'orders', filters.status, filters.q],
+    queryKey: ['admin', 'orders', f.s, f.q],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters.status) params.set('status', filters.status);
-      if (filters.q) params.set('q', filters.q.trim());
+      if (f.s) params.set('status', f.s);
+      if (f.q) params.set('q', f.q.trim());
       const res = await fetch(`/api/admin/orders?${params.toString()}`);
       const data = await res.json();
       if (!res.ok)
@@ -110,8 +107,7 @@ export default function AdminOrdersPage() {
       {
         accessorKey: 'created_at',
         header: 'Ngày đặt',
-        cell: ({ row }) =>
-          new Date(row.original.created_at).toLocaleString('vi-VN'),
+        cell: ({ row }) => formatDateTimeVi(row.original.created_at),
       },
     ],
     [],
@@ -135,9 +131,9 @@ export default function AdminOrdersPage() {
         <h1 className="text-3xl font-bold">Quản lý đơn hàng</h1>
         <div className="flex flex-wrap gap-2">
           <Select
-            value={filters.status || 'all'}
+            value={f.s || 'all'}
             onValueChange={(value) =>
-              setFilters({ status: value === 'all' ? '' : value })
+              setF({ s: value === 'all' ? '' : value })
             }
           >
             <SelectTrigger className="w-[220px]">
@@ -155,8 +151,8 @@ export default function AdminOrdersPage() {
             </SelectContent>
           </Select>
           <Input
-            value={filters.q}
-            onChange={(e) => setFilters({ q: e.target.value })}
+            value={f.q}
+            onChange={(e) => setF({ q: e.target.value })}
             placeholder="Tìm tên / SĐT"
             className="w-[220px]"
           />

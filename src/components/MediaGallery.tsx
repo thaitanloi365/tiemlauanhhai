@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { MenuMedia } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 
 type Props = {
-  media: MenuMedia[];
+  media: AppTypes.MenuMedia[];
 };
 
 export function MediaGallery({ media }: Props) {

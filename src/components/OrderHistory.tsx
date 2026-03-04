@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import type { Order } from '@/lib/types';
+import { formatDateTimeVi } from '@/lib/date';
 import { formatCurrency, statusClass, statusLabel } from '@/lib/utils/format';
 
 type Props = {
-  orders: Order[];
+  orders: AppTypes.Order[];
 };
 
 export function OrderHistory({ orders }: Props) {
@@ -34,7 +34,7 @@ export function OrderHistory({ orders }: Props) {
                 {formatCurrency(order.total_amount)}
               </p>
               <p className="text-sm text-muted-foreground">
-                {new Date(order.created_at).toLocaleString('vi-VN')}
+                {formatDateTimeVi(order.created_at)}
               </p>
             </div>
             <span

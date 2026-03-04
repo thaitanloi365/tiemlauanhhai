@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canManageRole, type AdminRole } from '@/lib/server/admin-auth';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
-import { employeeUpdateSchema } from '@/lib/utils/validation';
+import { employeeUpdateSchema } from '@/lib/schemas';
 import { resolveAdminUserFromRequest } from '@/lib/server/next-admin';
 
 type RouteContext = {
@@ -87,7 +87,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     .from('admin_users')
     .update({
       role: parsed.data.role,
-      display_name: parsed.data.displayName ?? null,
+      display_name: parsed.data.display_name ?? null,
     })
     .eq('id', params.id)
     .select('id,email,role,display_name,created_at')

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canManageRole, type AdminRole } from '@/lib/server/admin-auth';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
-import { employeeSchema } from '@/lib/utils/validation';
+import { employeeSchema } from '@/lib/schemas';
 import { resolveAdminUserFromRequest } from '@/lib/server/next-admin';
 
 export async function GET(request: NextRequest) {
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       id: createdAuth.user.id,
       email: parsed.data.email,
       role: parsed.data.role,
-      display_name: parsed.data.displayName ?? null,
+      display_name: parsed.data.display_name ?? null,
     })
     .select('id,email,role,display_name,created_at')
     .single();

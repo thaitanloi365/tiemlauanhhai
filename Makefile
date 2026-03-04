@@ -1,6 +1,7 @@
 SHELL := /bin/sh
 
-ENV ?= dev
+env ?=
+ENV ?= $(if $(env),$(env),dev)
 ENV_FILE := .env.$(ENV)
 
 ifneq (,$(wildcard $(ENV_FILE)))
@@ -23,7 +24,7 @@ help:
 	@echo "  make db-nuke         - Reset remote DB from current migrations (no seed)"
 	@echo "  make db-reset        - Nuke + migrate + seed admin"
 	@echo "  make run CMD='...'   - Run any command with selected env exported"
-	@echo "  ENV options: dev (default) or prod"
+	@echo "  env/ENV options: dev (default) or prod"
 
 dev:
 	bun run dev

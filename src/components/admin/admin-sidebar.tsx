@@ -36,6 +36,7 @@ export function AdminSidebar({
       { href: '/admin/menu', label: 'Menu' },
       { href: '/admin/orders', label: 'Đơn hàng' },
       { href: '/admin/promotions', label: 'Khuyến mãi' },
+      { href: '/admin/promotion-security-logs', label: 'Security Logs' },
     ];
     if (adminRole === 'super_admin') {
       items.push({ href: '/admin/employees', label: 'Nhân viên' });

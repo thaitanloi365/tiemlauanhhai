@@ -23,6 +23,11 @@ const RULES = {
     windowMs: 15 * 60 * 1000,
     keyPrefix: 'reviews:post',
   },
+  promotionsValidatePost: {
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+    keyPrefix: 'promotions:validate:post',
+  },
   adminLoginPost: {
     limit: 5,
     windowMs: 15 * 60 * 1000,
@@ -48,6 +53,9 @@ function resolveRule(pathname: string, method: string): RateLimitRule | null {
   if (method === 'POST' && pathname === '/api/orders') return RULES.ordersPost;
   if (method === 'POST' && pathname === '/api/reviews')
     return RULES.reviewsPost;
+  if (method === 'POST' && pathname === '/api/promotions/validate') {
+    return RULES.promotionsValidatePost;
+  }
   if (method === 'POST' && pathname === '/api/admin/auth/login')
     return RULES.adminLoginPost;
 

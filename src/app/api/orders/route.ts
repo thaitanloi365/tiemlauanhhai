@@ -26,6 +26,8 @@ import {
   getPromotionByCode,
   validatePromotionForOrder,
 } from '@/lib/server/promotion';
+import { logPromotionSecurityEvent } from '@/lib/server/promotion-security-log';
+import { extractClientIp } from '@/lib/server/security';
 
 const ACTIVE_ORDER_STATUS_SET = new Set<AppTypes.Order['status']>(
   ORDER_ACTIVE_STATUSES,
@@ -158,9 +160,7 @@ function getDateBlockedMenuItems(
     .filter(Boolean) as Array<MenuRuleItem & { active_reason: string }>;
 }
 
-function isMainDishMenuItem(
-  menuItem: MenuRuleItem,
-) {
+function isMainDishMenuItem(menuItem: MenuRuleItem) {
   return menuItem.is_main_dish === true;
 }
 
@@ -169,8 +169,10 @@ function countRecentActiveOrdersByPhoneMock(phone: string) {
   return mockDb.getAllOrders().filter((order) => {
     if (normalizeVietnamPhone(order.phone) !== phone) return false;
     if (!ACTIVE_ORDER_STATUS_SET.has(order.status)) return false;
-    return parseInTz(order.created_at, APP_TIMEZONE).valueOf() >
-      nowMs - ORDER_TIME.PHONE_WINDOW_MS;
+    return (
+      parseInTz(order.created_at, APP_TIMEZONE).valueOf() >
+      nowMs - ORDER_TIME.PHONE_WINDOW_MS
+    );
   }).length;
 }
 
@@ -179,18 +181,9 @@ async function rollbackPromotionCounter(
   promotionId: string | null,
 ) {
   if (!promotionId) return;
-  const { data: promotion } = await supabase
-    .from('promotions')
-    .select('used_count')
-    .eq('id', promotionId)
-    .maybeSingle();
-  if (!promotion) return;
-  const usedCount = Number(promotion.used_count ?? 0);
-  const nextUsedCount = Math.max(usedCount - 1, 0);
-  await supabase
-    .from('promotions')
-    .update({ used_count: nextUsedCount })
-    .eq('id', promotionId);
+  await supabase.rpc('rollback_promotion_consume', {
+    p_promotion_id: promotionId,
+  });
 }
 
 async function cleanupFailedOrderCreate(
@@ -239,6 +232,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const clientIp = extractClientIp(request);
   let payload: unknown;
   try {
     payload = await request.json();
@@ -421,9 +415,9 @@ export async function POST(request: NextRequest) {
           typeof item.block_today_reason === 'string'
             ? item.block_today_reason
             : null,
-        blockedDeliveryDates: ((item.blocked_delivery_dates ?? []) as string[]).map(
-          (entry) => String(entry),
-        ),
+        blockedDeliveryDates: (
+          (item.blocked_delivery_dates ?? []) as string[]
+        ).map((entry) => String(entry)),
         blockedDeliveryDateReasons:
           item.blocked_delivery_date_reasons &&
           typeof item.blocked_delivery_date_reasons === 'object' &&
@@ -486,7 +480,10 @@ export async function POST(request: NextRequest) {
   let discountAmount = 0;
   if (body.promotion_code?.trim()) {
     const promotion = await getPromotionByCode(supabase, body.promotion_code);
-    const validatedPromotion = validatePromotionForOrder(promotion, totalAmount);
+    const validatedPromotion = validatePromotionForOrder(
+      promotion,
+      totalAmount,
+    );
     if (!validatedPromotion.ok) {
       return NextResponse.json(
         { message: validatedPromotion.message },
@@ -502,9 +499,24 @@ export async function POST(request: NextRequest) {
       },
     );
     if (consumeError) {
-      return NextResponse.json({ message: consumeError.message }, { status: 500 });
+      await logPromotionSecurityEvent({
+        eventType: 'promotion_consume_failed',
+        promotionCode: body.promotion_code?.trim().toUpperCase() ?? null,
+        ipAddress: clientIp || null,
+        reason: consumeError.message,
+      });
+      return NextResponse.json(
+        { message: consumeError.message },
+        { status: 500 },
+      );
     }
     if (!consumed) {
+      await logPromotionSecurityEvent({
+        eventType: 'promotion_consume_failed',
+        promotionCode: body.promotion_code?.trim().toUpperCase() ?? null,
+        ipAddress: clientIp || null,
+        reason: 'Promotion no longer valid or usage limit reached',
+      });
       return NextResponse.json(
         {
           message:
@@ -559,14 +571,19 @@ export async function POST(request: NextRequest) {
   }
 
   if (promotionId) {
-    const { error: usageError } = await supabase.from('promotion_usages').insert({
-      promotion_id: promotionId,
-      order_id: order.id,
-      discount_amount: discountAmount,
-    });
+    const { error: usageError } = await supabase
+      .from('promotion_usages')
+      .insert({
+        promotion_id: promotionId,
+        order_id: order.id,
+        discount_amount: discountAmount,
+      });
     if (usageError) {
       await cleanupFailedOrderCreate(supabase, order.id, promotionId);
-      return NextResponse.json({ message: usageError.message }, { status: 500 });
+      return NextResponse.json(
+        { message: usageError.message },
+        { status: 500 },
+      );
     }
   }
 

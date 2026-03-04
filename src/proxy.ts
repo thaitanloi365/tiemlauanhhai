@@ -12,6 +12,7 @@ import {
   validatePublicApiBodySize,
   validateSameOriginForApiWrites,
 } from '@/lib/server/security';
+import { logPromotionSecurityEvent } from '@/lib/server/promotion-security-log';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/supabase/server';
 
 const PUBLIC_ADMIN_PAGES = new Set(['/admin/login']);
@@ -83,6 +84,17 @@ export async function proxy(request: NextRequest) {
   });
   if (rateLimit && !rateLimit.ok) {
     await recordRateLimitViolation(clientIp);
+    if (pathname === '/api/promotions/validate') {
+      await logPromotionSecurityEvent({
+        eventType: 'promotion_validate_rate_limited',
+        ipAddress: clientIp || null,
+        reason: 'Too many promotion validate requests',
+        metadata: {
+          limit: rateLimit.limit,
+          retryAfterSeconds: rateLimit.retryAfterSeconds,
+        },
+      });
+    }
     const response = NextResponse.json(
       { message: 'Too many requests' },
       {

@@ -3,6 +3,7 @@ import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
 import { mockDb } from '@/lib/server/mock-db';
 import { adminOrderUpdateSchema } from '@/lib/schemas';
 import { resolveAdminUserFromRequest } from '@/lib/server/next-admin';
+import { logPromotionSecurityEvent } from '@/lib/server/promotion-security-log';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -141,6 +142,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       p_now: new Date().toISOString(),
     });
     if (releaseError) {
+      await logPromotionSecurityEvent({
+        eventType: 'promotion_release_failed',
+        reason: releaseError.message,
+        metadata: { orderId },
+      });
       return NextResponse.json({ message: releaseError.message }, { status: 500 });
     }
   }

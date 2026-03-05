@@ -35,6 +35,8 @@ export function AdminSidebar({
       { href: '/admin/statistics', label: 'Thống kê' },
       { href: '/admin/menu', label: 'Menu' },
       { href: '/admin/orders', label: 'Đơn hàng' },
+      { href: '/admin/chat', label: 'Chat' },
+      { href: '/admin/reviews', label: 'Đánh giá' },
       { href: '/admin/promotions', label: 'Khuyến mãi' },
       { href: '/admin/promotion-security-logs', label: 'Security Logs' },
     ];

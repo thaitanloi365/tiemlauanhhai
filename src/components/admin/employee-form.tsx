@@ -156,103 +156,104 @@ export function EmployeeForm({
               : 'Cập nhật vai trò hoặc tên hiển thị.'}
           </DialogDescription>
         </DialogHeader>
-
-        <form
-          id="employee-form"
-          className="mt-4 grid gap-3"
-          onSubmit={handleSubmit(save)}
-          noValidate
-        >
-          <input type="hidden" {...register('mode')} />
-          <div className="grid gap-1">
-            <Label>Email</Label>
-            <Input
-              type="email"
-              disabled={mode === 'edit'}
-              placeholder="employee@example.com"
-              className="disabled:bg-muted"
-              {...register('email')}
-            />
-            {errors.email?.message ? (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            ) : null}
-          </div>
-
-          {mode === 'create' ? (
+        <div className="mt-4 space-y-4">
+          <form
+            id="employee-form"
+            className="grid gap-3"
+            onSubmit={handleSubmit(save)}
+            noValidate
+          >
+            <input type="hidden" {...register('mode')} />
             <div className="grid gap-1">
-              <Label>Mật khẩu</Label>
+              <Label>Email</Label>
               <Input
-                type="password"
-                placeholder="Tối thiểu 8 ký tự"
-                {...register('password')}
+                type="email"
+                disabled={mode === 'edit'}
+                placeholder="employee@example.com"
+                className="disabled:bg-muted"
+                {...register('email')}
               />
-              <span className="text-xs text-muted-foreground">
-                {strongPasswordGuideline}
-              </span>
-              {errors.password?.message ? (
-                <p className="text-xs text-destructive">{errors.password.message}</p>
+              {errors.email?.message ? (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
               ) : null}
             </div>
+
+            {mode === 'create' ? (
+              <div className="grid gap-1">
+                <Label>Mật khẩu</Label>
+                <Input
+                  type="password"
+                  placeholder="Tối thiểu 8 ký tự"
+                  {...register('password')}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {strongPasswordGuideline}
+                </span>
+                {errors.password?.message ? (
+                  <p className="text-xs text-destructive">{errors.password.message}</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="grid gap-1">
+              <Label>Tên hiển thị</Label>
+              <Input
+                type="text"
+                placeholder="Ví dụ: Quản lý ca sáng"
+                {...register('display_name')}
+              />
+              {errors.display_name?.message ? (
+                <p className="text-xs text-destructive">
+                  {errors.display_name.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-1">
+              <Label>Vai trò</Label>
+              <Controller
+                control={control}
+                name="role"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roleOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.role?.message ? (
+                <p className="text-xs text-destructive">{errors.role.message}</p>
+              ) : null}
+            </div>
+          </form>
+
+          {errors.root?.message ? (
+            <p className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-foreground">
+              {errors.root.message}
+            </p>
           ) : null}
-
-          <div className="grid gap-1">
-            <Label>Tên hiển thị</Label>
-            <Input
-              type="text"
-              placeholder="Ví dụ: Quản lý ca sáng"
-              {...register('display_name')}
-            />
-            {errors.display_name?.message ? (
-              <p className="text-xs text-destructive">
-                {errors.display_name.message}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="grid gap-1">
-            <Label>Vai trò</Label>
-            <Controller
-              control={control}
-              name="role"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roleOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.role?.message ? (
-              <p className="text-xs text-destructive">{errors.role.message}</p>
-            ) : null}
-          </div>
-          <DialogFooter className="mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Hủy
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Đang lưu...' : 'Lưu'}
-            </Button>
-          </DialogFooter>
-        </form>
-
-        {errors.root?.message ? (
-          <p className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-foreground">
-            {errors.root.message}
-          </p>
-        ) : null}
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Hủy
+          </Button>
+          <Button type="submit" form="employee-form" disabled={isSubmitting}>
+            {isSubmitting ? 'Đang lưu...' : 'Lưu'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

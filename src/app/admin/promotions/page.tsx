@@ -321,100 +321,106 @@ export default function AdminPromotionsPage() {
               Thiết lập loại giảm giá, điều kiện đơn tối thiểu, giới hạn lượt dùng và thời gian hiệu lực.
             </DialogDescription>
           </DialogHeader>
-
-          <form className="grid gap-3 md:grid-cols-2 lg:grid-cols-3" onSubmit={submitForm} noValidate>
-            <Input
-              placeholder="Mã code"
-              {...register('code')}
-              value={codeValue}
-              disabled={Boolean(editingId)}
-              onChange={(event) => {
-                setValue('code', event.target.value.toUpperCase(), {
-                  shouldDirty: true,
-                });
-              }}
-            />
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              {...register('type')}
-              disabled={Boolean(editingId)}
+          <div className="space-y-4">
+            <form
+              id="promotion-form"
+              className="grid gap-3 md:grid-cols-2 lg:grid-cols-3"
+              onSubmit={submitForm}
+              noValidate
             >
-              {PROMOTION_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <Input
-              type="number"
-              min={1}
-              placeholder={typeValue === 'percentage' ? 'Phần trăm giảm (%)' : 'Số tiền giảm'}
-              {...register('discount_value')}
-            />
-            {typeValue === 'percentage' ? (
+              <Input
+                type="number"
+                placeholder="Mã code"
+                {...register('code')}
+                value={codeValue}
+                disabled={Boolean(editingId)}
+                onChange={(event) => {
+                  setValue('code', event.target.value.toUpperCase(), {
+                    shouldDirty: true,
+                  });
+                }}
+              />
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                {...register('type')}
+                disabled={Boolean(editingId)}
+              >
+                {PROMOTION_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <Input
+                type="number"
+                min={1}
+                placeholder={typeValue === 'percentage' ? 'Phần trăm giảm (%)' : 'Số tiền giảm'}
+                {...register('discount_value')}
+              />
+              {typeValue === 'percentage' ? (
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Giảm tối đa (đ)"
+                  {...register('max_discount_amount')}
+                />
+              ) : null}
               <Input
                 type="number"
                 min={0}
-                placeholder="Giảm tối đa (đ)"
-                {...register('max_discount_amount')}
+                placeholder="Đơn tối thiểu (đ)"
+                {...register('min_order_amount')}
               />
-            ) : null}
-            <Input
-              type="number"
-              min={0}
-              placeholder="Đơn tối thiểu (đ)"
-              {...register('min_order_amount')}
-            />
-            <Input
-              type="number"
-              min={1}
-              placeholder="Giới hạn lượt dùng"
-              {...register('max_usage')}
-            />
-            <Input type="datetime-local" {...register('valid_from')} />
-            <Input type="datetime-local" {...register('valid_until')} />
-            <label className="flex items-center gap-2 rounded-md border border-input px-3 text-sm">
-              <Controller
-                name="is_active"
-                control={control}
-                render={({ field }) => (
-                  <Checkbox
-                    checked={Boolean(field.value)}
-                    onCheckedChange={(checked) => field.onChange(Boolean(checked))}
-                  />
-                )}
+              <Input
+                type="number"
+                min={1}
+                placeholder="Giới hạn lượt dùng"
+                {...register('max_usage')}
               />
-              Đang hoạt động
-            </label>
+              <Input type="datetime-local" {...register('valid_from')} />
+              <Input type="datetime-local" {...register('valid_until')} />
+              <label className="flex items-center gap-2 rounded-md border border-input px-3 text-sm">
+                <Controller
+                  name="is_active"
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={Boolean(field.value)}
+                      onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                    />
+                  )}
+                />
+                Đang hoạt động
+              </label>
+            </form>
 
             {Object.keys(errors).length > 0 ? (
-              <p className="text-sm text-destructive md:col-span-2 lg:col-span-3">
+              <p className="text-sm text-destructive">
                 Vui lòng kiểm tra lại dữ liệu nhập.
               </p>
             ) : null}
-
-            <DialogFooter className="md:col-span-2 lg:col-span-3">
-              <Button type="submit" disabled={isSubmitting || isMutating}>
-                {isSubmitting
-                  ? 'Đang lưu...'
-                  : editingId
-                    ? 'Lưu thay đổi'
-                    : 'Tạo mã khuyến mãi'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isSubmitting || isMutating}
-                onClick={() => {
-                  setModalOpen(false);
-                  setEditingId(null);
-                  reset(EMPTY_FORM);
-                }}
-              >
-                Hủy
-              </Button>
-            </DialogFooter>
-          </form>
+          </div>
+          <DialogFooter>
+            <Button type="submit" form="promotion-form" disabled={isSubmitting || isMutating}>
+              {isSubmitting
+                ? 'Đang lưu...'
+                : editingId
+                  ? 'Lưu thay đổi'
+                  : 'Tạo mã khuyến mãi'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSubmitting || isMutating}
+              onClick={() => {
+                setModalOpen(false);
+                setEditingId(null);
+                reset(EMPTY_FORM);
+              }}
+            >
+              Hủy
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

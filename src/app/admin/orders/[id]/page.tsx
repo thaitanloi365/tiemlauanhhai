@@ -6,13 +6,32 @@ import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { MessageCircle, Smile } from 'lucide-react';
 import { ORDER_STATUS_VALUES } from '@/lib/constants/order';
 import { addHoursInTz, formatLocaleDate, formatLocaleTime, formatDateTimeVi } from '@/lib/date';
 import { formatCurrency, statusLabel } from '@/lib/utils/format';
 import { adminOrderUpdateSchema } from '@/lib/schemas';
+import { isChatReadonlyByOrderStatus } from '@/lib/constants/chat';
+import { getReviewEmotionByRating } from '@/lib/constants/review';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ChatBox } from '@/components/ChatBox';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   Select,
   SelectContent,
@@ -47,6 +66,9 @@ type OrderDetailResponse = {
     menu_variant?: { name?: string; menu_item?: { name?: string } };
   }>;
   logs: Array<{ status: string; created_at: string }>;
+  review: AppTypes.Review | null;
+  has_chat?: boolean;
+  has_unread_for_admin?: boolean;
 };
 
 const adminOrderUpdateFormSchema = adminOrderUpdateSchema.extend({
@@ -88,6 +110,9 @@ export default function AdminOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [message, setMessage] = useState('');
+  const [chatOpen, setChatOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const {
     control,
     register,
@@ -128,6 +153,14 @@ export default function AdminOrderDetailPage() {
       tracking_url: order.tracking_url ?? '',
     });
   }, [order, reset]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setIsDesktop(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
 
   async function save(values: AdminOrderUpdateFormValues) {
     try {
@@ -171,6 +204,33 @@ export default function AdminOrderDetailPage() {
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-md border border-border bg-card p-4">
             <h2 className="text-xl font-semibold">Thông tin đơn</h2>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="relative"
+                aria-label="Mở chat đơn hàng"
+                title="Mở chat"
+                onClick={() => setChatOpen(true)}
+              >
+                <MessageCircle />
+                {detailQuery.data?.has_unread_for_admin ? (
+                  <span className="absolute right-1 top-1 size-2 rounded-full bg-destructive" />
+                ) : null}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Xem đánh giá đơn hàng"
+                title="Xem đánh giá"
+                disabled={!detailQuery.data?.review}
+                onClick={() => setReviewOpen(true)}
+              >
+                <Smile />
+              </Button>
+            </div>
             <p className="mt-2 text-sm">Khách: {order.customer_name}</p>
             {order.scheduled_for ? (
               <p className="mt-1 text-sm">
@@ -344,6 +404,91 @@ export default function AdminOrderDetailPage() {
           Không tìm thấy đơn.
         </p>
       )}
+      {order ? (
+        <>
+          {isDesktop ? (
+            <Sheet open={chatOpen} onOpenChange={setChatOpen}>
+              <SheetContent
+                side="right"
+                className="my-3 mr-3 flex h-[calc(100dvh-1.5rem)] w-[min(920px,calc(100vw-1.5rem))] max-w-none flex-col overflow-hidden rounded-2xl border p-4 sm:max-w-none"
+              >
+                <SheetHeader>
+                  <SheetTitle>Chat với khách hàng</SheetTitle>
+                  <SheetDescription>
+                    Mã đơn {order.id.slice(0, 8).toUpperCase()} - {order.customer_name}
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-3 min-h-0 flex-1 overflow-hidden px-1 pb-1">
+                  <ChatBox
+                    orderId={params.id}
+                    senderType="admin"
+                    readonly={isChatReadonlyByOrderStatus(order.status)}
+                    title="Chat với khách hàng"
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <Drawer open={chatOpen} onOpenChange={setChatOpen}>
+              <DrawerContent className="max-h-[92vh]">
+                <DrawerHeader>
+                  <DrawerTitle>Chat với khách hàng</DrawerTitle>
+                  <DrawerDescription>
+                    Mã đơn {order.id.slice(0, 8).toUpperCase()} - {order.customer_name}
+                  </DrawerDescription>
+                </DrawerHeader>
+                <div className="min-h-0 flex-1 overflow-hidden px-1 pb-1">
+                  <ChatBox
+                    orderId={params.id}
+                    senderType="admin"
+                    readonly={isChatReadonlyByOrderStatus(order.status)}
+                    title="Chat với khách hàng"
+                  />
+                </div>
+              </DrawerContent>
+            </Drawer>
+          )}
+
+          <Drawer open={reviewOpen} onOpenChange={setReviewOpen}>
+            <DrawerContent className="max-h-[82vh]">
+              <DrawerHeader>
+                <DrawerTitle>Đánh giá đơn hàng</DrawerTitle>
+                <DrawerDescription>
+                  Mã đơn {order.id.slice(0, 8).toUpperCase()}
+                </DrawerDescription>
+              </DrawerHeader>
+              <div className="px-1 pb-2">
+              {detailQuery.data?.review ? (
+                <div className="rounded-md border border-border bg-muted/40 p-4">
+                  <p className="text-2xl">
+                    {getReviewEmotionByRating(detailQuery.data.review.rating).emoji}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {getReviewEmotionByRating(detailQuery.data.review.rating).label}
+                  </p>
+                  <p className="mt-2 text-sm">
+                    {detailQuery.data.review.comment || 'Khách chưa để lại nhận xét.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                  Đơn hàng này chưa có đánh giá từ khách.
+                </div>
+              )}
+              </div>
+              <DrawerFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setReviewOpen(false)}
+                >
+                  Đóng
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+        </>
+      ) : null}
     </div>
   );
 }

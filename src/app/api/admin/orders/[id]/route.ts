@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       { status: 404 },
     );
 
-  const [{ data: items }, { data: logs }, { data: review }] = await Promise.all(
+  const [{ data: items }, { data: logs }, { data: review }, { data: messages }] = await Promise.all(
     [
       supabase
         .from('order_items')
@@ -59,14 +59,30 @@ export async function GET(request: NextRequest, context: RouteContext) {
         .select('*')
         .eq('order_id', order.id)
         .maybeSingle(),
+      supabase
+        .from('order_messages')
+        .select('sender_type,created_at')
+        .eq('order_id', order.id)
+        .order('created_at', { ascending: false }),
     ],
   );
+  const latestCustomerMessageAt = (messages ?? []).find(
+    (message) => message.sender_type === 'customer',
+  )?.created_at as string | undefined;
+  const adminLastSeen = order.admin_last_seen_message_at as string | null;
 
   return NextResponse.json({
     order,
     items: items ?? [],
     logs: logs ?? [],
     review: review ?? null,
+    has_chat: (messages ?? []).length > 0,
+    has_unread_for_admin: Boolean(
+      latestCustomerMessageAt &&
+        (!adminLastSeen ||
+          new Date(latestCustomerMessageAt).getTime() >
+            new Date(adminLastSeen).getTime()),
+    ),
   });
 }
 

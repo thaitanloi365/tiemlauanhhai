@@ -5,6 +5,7 @@ import {
   SCHEDULED_SLOT_VALUES,
 } from '@/lib/constants/order';
 import { PROMOTION_TYPE_VALUES } from '@/lib/constants/promotion';
+import { CHAT_LIMITS } from '@/lib/constants/chat';
 
 const vnPhoneRegex = /^(?:\+84|84|0)(?:3|5|7|8|9)\d{8}$/;
 const canonicalUuidRegex =
@@ -150,8 +151,30 @@ export const reviewSchema = z.object({
   session_id: uuidLikeSchema,
   order_id: uuidLikeSchema,
   rating: z.number().int().min(1).max(5),
-  comment: z.string().min(3).max(800),
+  comment: z.string().max(1000),
 });
+
+export const orderMessageCreateSchema = z
+  .object({
+    content: z
+      .string()
+      .trim()
+      .max(CHAT_LIMITS.MAX_TEXT_LENGTH, 'Tin nhắn tối đa 1000 ký tự')
+      .optional()
+      .nullable(),
+    images: z.array(z.string().trim().url()).max(3).optional().default([]),
+  })
+  .superRefine((payload, ctx) => {
+    const hasContent = Boolean(payload.content && payload.content.trim().length > 0);
+    const hasImages = (payload.images?.length ?? 0) > 0;
+    if (!hasContent && !hasImages) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['content'],
+        message: 'Tin nhắn phải có nội dung hoặc hình ảnh',
+      });
+    }
+  });
 
 export const adminOrderUpdateSchema = z.object({
   status: z.enum(ORDER_STATUS_VALUES),

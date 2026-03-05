@@ -22,7 +22,15 @@ export async function GET(request: NextRequest) {
           order.phone.toLowerCase().includes(query),
       );
     }
-    return NextResponse.json({ stats, orders });
+    return NextResponse.json({
+      stats,
+      orders: orders.map((order) => ({
+        ...order,
+        has_review: false,
+        has_chat: false,
+        has_unread_for_admin: false,
+      })),
+    });
   }
 
   const supabase = createServerSupabase();
@@ -40,6 +48,35 @@ export async function GET(request: NextRequest) {
   if (error)
     return NextResponse.json({ message: error.message }, { status: 500 });
 
+  const orderIds = (orders ?? []).map((order) => order.id as string);
+  const hasReviewSet = new Set<string>();
+  const latestCustomerMessageByOrder = new Map<string, string>();
+  const hasChatSet = new Set<string>();
+  if (orderIds.length > 0) {
+    const [{ data: reviews }, { data: messages }] = await Promise.all([
+      supabase.from('reviews').select('order_id').in('order_id', orderIds),
+      supabase
+        .from('order_messages')
+        .select('order_id,sender_type,created_at')
+        .in('order_id', orderIds)
+        .order('created_at', { ascending: false }),
+    ]);
+
+    for (const review of reviews ?? []) {
+      hasReviewSet.add(review.order_id as string);
+    }
+    for (const message of messages ?? []) {
+      const orderId = message.order_id as string;
+      hasChatSet.add(orderId);
+      if (
+        message.sender_type === 'customer' &&
+        !latestCustomerMessageByOrder.has(orderId)
+      ) {
+        latestCustomerMessageByOrder.set(orderId, message.created_at as string);
+      }
+    }
+  }
+
   const stats = {
     total: orders?.length ?? 0,
     pending: (orders ?? []).filter((order) => order.status === 'pending')
@@ -49,5 +86,23 @@ export async function GET(request: NextRequest) {
     delivered: (orders ?? []).filter((order) => order.status === 'delivered')
       .length,
   };
-  return NextResponse.json({ stats, orders });
+  return NextResponse.json({
+    stats,
+    orders: (orders ?? []).map((order) => {
+      const latestCustomerMessageAt = latestCustomerMessageByOrder.get(order.id as string);
+      const adminLastSeen = order.admin_last_seen_message_at as string | null;
+      const hasUnreadForAdmin = Boolean(
+        latestCustomerMessageAt &&
+          (!adminLastSeen ||
+            new Date(latestCustomerMessageAt).getTime() >
+              new Date(adminLastSeen).getTime()),
+      );
+      return {
+        ...order,
+        has_review: hasReviewSet.has(order.id as string),
+        has_chat: hasChatSet.has(order.id as string),
+        has_unread_for_admin: hasUnreadForAdmin,
+      };
+    }),
+  });
 }

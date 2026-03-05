@@ -6,14 +6,12 @@ import {
   ORDER_ACTIVE_STATUSES,
   ORDER_LIMITS,
   ORDER_TIME,
-  SCHEDULED_SLOTS,
   type ScheduledSlotValue,
 } from '@/lib/constants/order';
 import {
   APP_TIMEZONE,
   DATE_ONLY_FORMAT,
   type DateInput,
-  diffDaysFromDateOnly,
   formatDateOnlyInTz,
   now as dayjsNow,
   parseDateOnlyInTz,
@@ -21,6 +19,7 @@ import {
   parseInTz,
   toIso,
 } from '@/lib/date';
+import { validateScheduledSlotByRules } from '@/lib/order/scheduled-slot';
 import { orderSchema } from '@/lib/schemas';
 import {
   getPromotionByCode,
@@ -46,67 +45,46 @@ type MenuRuleItem = {
   category_id?: string;
 };
 
-function getCutoffHour(scheduledDate: string) {
-  const dayOfWeek = parseDateOnlyInTz(scheduledDate).day();
-  return dayOfWeek === 0 || dayOfWeek === 6 ? 16 : 14;
-}
-
 function validateScheduledDateSlot(
   scheduledDate: string,
   scheduledSlot: ScheduledSlotValue,
   now: DateInput = dayjsNow().valueOf(),
 ): { ok: true; scheduledFor: string } | { ok: false; message: string } {
-  const parsedDate = parseDateOnlyInTz(scheduledDate);
-  if (!parsedDate.isValid()) {
-    return { ok: false, message: 'Ngày nhận món không hợp lệ.' };
-  }
-
-  const vnNow = parseInTz(now, APP_TIMEZONE);
-  const diffDays = diffDaysFromDateOnly(
-    vnNow.format(DATE_ONLY_FORMAT),
-    scheduledDate,
-    APP_TIMEZONE,
-  );
-  const cutoffHour = getCutoffHour(scheduledDate);
-  const slot = SCHEDULED_SLOTS[scheduledSlot];
-
-  if (!slot) {
-    return { ok: false, message: 'Khung giờ nhận món không hợp lệ.' };
-  }
-
-  if (diffDays < 0) {
-    return { ok: false, message: 'Không thể chọn ngày trong quá khứ.' };
-  }
-  if (diffDays > 7) {
-    return { ok: false, message: 'Chi cho phep dat truoc toi da 7 ngay.' };
-  }
-  if (diffDays === 0) {
-    const currentHour = vnNow.hour();
-    const currentMinuteOfDay = currentHour * 60 + vnNow.minute();
-    const slotStartMinute = slot.startHour * 60;
-    if (currentHour >= cutoffHour) {
-      const cutoffLabel = cutoffHour === 16 ? '16:00' : '14:00';
+  const validation = validateScheduledSlotByRules(scheduledDate, scheduledSlot, now);
+  if (!validation.ok) {
+    if (validation.reason === 'invalid_date') {
+      return { ok: false, message: 'Ngày nhận món không hợp lệ.' };
+    }
+    if (validation.reason === 'invalid_slot') {
+      return { ok: false, message: 'Khung giờ nhận món không hợp lệ.' };
+    }
+    if (validation.reason === 'past_date') {
+      return { ok: false, message: 'Không thể chọn ngày trong quá khứ.' };
+    }
+    if (validation.reason === 'too_far_date') {
+      return { ok: false, message: 'Chi cho phep dat truoc toi da 7 ngay.' };
+    }
+    if (validation.reason === 'after_daily_cutoff') {
+      const cutoffLabel = validation.cutoffHour === 16 ? '16:00' : '14:00';
       return {
         ok: false,
         message: `Sau ${cutoffLabel}, nhà hàng không nhận đơn cho hôm nay.`,
       };
     }
-    if (slot.endHour > cutoffHour) {
-      const cutoffLabel = cutoffHour === 16 ? '16:00' : '14:00';
+    if (validation.reason === 'slot_exceeds_daily_cutoff') {
+      const cutoffLabel = validation.cutoffHour === 16 ? '16:00' : '14:00';
       return {
         ok: false,
         message: `Khung giờ đã vượt giới hạn nhận đơn hôm nay (${cutoffLabel}).`,
       };
     }
-    if (slotStartMinute < currentMinuteOfDay) {
-      return {
-        ok: false,
-        message: 'Khung giờ nhận món đã qua. Vui lòng chọn khung giờ khác.',
-      };
-    }
+    return {
+      ok: false,
+      message: 'Khung giờ nhận món đã qua. Vui lòng chọn khung giờ khác.',
+    };
   }
 
-  const startHourText = String(slot.startHour).padStart(2, '0');
+  const startHourText = String(validation.slot.startHour).padStart(2, '0');
   return {
     ok: true,
     scheduledFor: parseDateTimeInTz(

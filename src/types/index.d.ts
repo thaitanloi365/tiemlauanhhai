@@ -82,6 +82,8 @@ declare global {
       tracking_id: string | null;
       tracking_url: string | null;
       expired_at: string | null;
+      customer_last_seen_message_at?: string | null;
+      admin_last_seen_message_at?: string | null;
       created_at: string;
       updated_at: string;
     }
@@ -128,6 +130,18 @@ declare global {
       session_id: string;
       rating: number;
       comment: string;
+      created_at: string;
+    }
+
+    type MessageSenderType = 'customer' | 'admin';
+
+    interface OrderMessage {
+      id: string;
+      order_id: string;
+      sender_type: MessageSenderType;
+      sender_id: string;
+      content: string | null;
+      images: string[];
       created_at: string;
     }
 

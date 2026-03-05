@@ -15,13 +15,17 @@ import { OrderConfirmModal } from '@/components/OrderConfirmModal';
 import { BottomNav } from '@/components/BottomNav';
 import { useCartStore, selectCartTotal } from '@/lib/stores/cart';
 import { sessionStore } from '@/lib/stores/session';
-import { SCHEDULED_SLOT_OPTIONS } from '@/lib/constants/order';
+import {
+  SCHEDULED_SLOT_OPTIONS,
+  type ScheduledSlotValue,
+} from '@/lib/constants/order';
 import {
   addDaysInTz,
   formatDateOnlyInTz,
   formatLocaleDate,
   now as dayjsNow,
 } from '@/lib/date';
+import { getAvailableScheduledSlotsForDate } from '@/lib/order/scheduled-slot';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils/format';
@@ -74,7 +78,16 @@ export default function CartPage() {
   const todayDateValue = dateOptions[0]?.value ?? '';
   const tomorrowDateValue = dateOptions[1]?.value ?? '';
   const scheduledDate = form.watch('scheduled_date');
-
+  const scheduledSlot = form.watch('scheduled_slot');
+  const slotOptions = useMemo(() => {
+    if (!scheduledDate) return SCHEDULED_SLOT_OPTIONS;
+    const availableSlotSet = new Set<ScheduledSlotValue>(
+      getAvailableScheduledSlotsForDate(scheduledDate, dayjsNow().valueOf()),
+    );
+    return SCHEDULED_SLOT_OPTIONS.filter((option) =>
+      availableSlotSet.has(option.value as ScheduledSlotValue),
+    );
+  }, [scheduledDate]);
   const menuRulesQuery = useQuery({
     queryKey: ['menu-rules'],
     queryFn: async () => {
@@ -145,6 +158,13 @@ export default function CartPage() {
     }
     return nextReasons;
   }, [dateOptions, lines, menuItemById, todayDateValue, tomorrowDateValue]);
+  const noSlotReason = useMemo(() => {
+    if (!scheduledDate || slotOptions.length > 0) return '';
+    if (disabledDateReasons[scheduledDate]) return '';
+    const selectedDateLabel =
+      dateOptions.find((option) => option.value === scheduledDate)?.label ?? scheduledDate;
+    return `${selectedDateLabel}: Đã quá giờ đặt cho ngày này. Vui lòng chọn ngày khác.`;
+  }, [dateOptions, disabledDateReasons, scheduledDate, slotOptions.length]);
 
   const createOrderMutation = useMutation({
     mutationFn: async (values: OrderFormValues) => {
@@ -215,6 +235,13 @@ export default function CartPage() {
     form.setValue('scheduled_slot', '');
     form.setError('scheduled_date', { type: 'manual', message: blockedReason });
   }, [disabledDateReasons, form, scheduledDate]);
+
+  useEffect(() => {
+    if (!scheduledSlot) return;
+    const slotIsAllowed = slotOptions.some((option) => option.value === scheduledSlot);
+    if (slotIsAllowed) return;
+    form.setValue('scheduled_slot', '', { shouldDirty: true, shouldValidate: true });
+  }, [form, scheduledSlot, slotOptions]);
 
   const validateBeforeConfirm = async () => {
     if (lines.length === 0) {
@@ -302,8 +329,9 @@ export default function CartPage() {
             <OrderForm
               form={form}
               dateOptions={dateOptions}
-              slotOptions={SCHEDULED_SLOT_OPTIONS}
+              slotOptions={slotOptions}
               disabledDateReasons={disabledDateReasons}
+              noSlotReason={noSlotReason}
               submitting={createOrderMutation.isPending}
             />
             {submitError ? (

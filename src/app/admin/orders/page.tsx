@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   flexRender,
@@ -12,6 +12,7 @@ import {
   type SortingState,
   useReactTable,
 } from '@tanstack/react-table';
+import { MessageCircle, Smile } from 'lucide-react';
 import { useQueryStates, parseAsString } from 'nuqs';
 import {
   formatCurrency,
@@ -20,9 +21,20 @@ import {
 } from '@/lib/utils/format';
 import { ORDER_STATUS_OPTIONS } from '@/lib/constants/order';
 import { formatDateTimeVi } from '@/lib/date';
+import { isChatReadonlyByOrderStatus } from '@/lib/constants/chat';
+import { getReviewEmotionByRating } from '@/lib/constants/review';
+import { ChatBox } from '@/components/ChatBox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -38,6 +50,9 @@ type AdminOrder = {
   total_amount: number;
   status: string;
   created_at: string;
+  has_review?: boolean;
+  has_chat?: boolean;
+  has_unread_for_admin?: boolean;
 };
 
 const STATUS_OPTIONS = [
@@ -75,7 +90,7 @@ export default function AdminOrdersPage() {
             href={`/admin/orders/${row.original.id}`}
             className="text-primary underline"
           >
-            {row.original.id.slice(0, 8)}
+            {row.original.id.slice(0, 8).toUpperCase()}
           </Link>
         ),
       },
@@ -108,6 +123,11 @@ export default function AdminOrdersPage() {
         accessorKey: 'created_at',
         header: 'Ngày đặt',
         cell: ({ row }) => formatDateTimeVi(row.original.created_at),
+      },
+      {
+        id: 'actions',
+        header: 'Thao tác',
+        cell: ({ row }) => <AdminOrderRowActions order={row.original} />,
       },
     ],
     [],
@@ -231,5 +251,113 @@ export default function AdminOrdersPage() {
         </>
       )}
     </div>
+  );
+}
+
+function AdminOrderRowActions({ order }: { order: AdminOrder }) {
+  const [chatOpen, setChatOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  const reviewQuery = useQuery({
+    queryKey: ['admin', 'orders', 'review-by-order', order.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/orders/${order.id}`);
+      const data = (await res.json()) as {
+        message?: string;
+        review?: AppTypes.Review | null;
+      };
+      if (!res.ok) {
+        throw new Error(data.message ?? 'Không tải được đánh giá của đơn.');
+      }
+      return data.review ?? null;
+    },
+    enabled: reviewOpen && Boolean(order.has_review),
+  });
+
+  const review = reviewQuery.data;
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="relative"
+          aria-label="Mở chat đơn hàng"
+          title="Mở chat"
+          onClick={() => setChatOpen(true)}
+        >
+          <MessageCircle />
+          {order.has_unread_for_admin ? (
+            <span className="absolute right-1 top-1 size-2 rounded-full bg-destructive" />
+          ) : null}
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          aria-label="Xem đánh giá đơn hàng"
+          title="Xem đánh giá"
+          disabled={!order.has_review}
+          onClick={() => setReviewOpen(true)}
+        >
+          <Smile />
+        </Button>
+      </div>
+
+      <Dialog open={chatOpen} onOpenChange={setChatOpen}>
+        <DialogContent className="max-w-2xl">
+          <div className="min-h-0 overflow-hidden">
+            <ChatBox
+              key={order.id}
+              orderId={order.id}
+              senderType="admin"
+              readonly={isChatReadonlyByOrderStatus(order.status)}
+              title="Chat với khách hàng"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Đánh giá đơn hàng</DialogTitle>
+            <DialogDescription>
+              Mã đơn {order.id.slice(0, 8).toUpperCase()}
+            </DialogDescription>
+          </DialogHeader>
+          {reviewQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Đang tải đánh giá...</p>
+          ) : reviewQuery.isError ? (
+            <p className="text-sm text-destructive">{reviewQuery.error.message}</p>
+          ) : review ? (
+            <div className="rounded-md border border-border bg-muted/40 p-4">
+              <p className="text-2xl">{getReviewEmotionByRating(review.rating).emoji}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {getReviewEmotionByRating(review.rating).label}
+              </p>
+              <p className="mt-2 text-sm">
+                {review.comment || 'Khách chưa để lại nhận xét.'}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+              Đơn hàng này chưa có đánh giá từ khách.
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReviewOpen(false)}
+            >
+              Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

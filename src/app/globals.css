@@ -49,6 +49,11 @@
     Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --font-body: var(--font-sans);
   --font-heading: var(--font-serif);
+  --scrollbar-size: 10px;
+  --scrollbar-track: var(--muted);
+  --scrollbar-thumb: color-mix(in oklab, var(--primary) 35%, var(--muted));
+  --scrollbar-thumb-hover:
+    color-mix(in oklab, var(--primary) 50%, var(--muted));
   --radius: 0.5rem;
   --shadow-2xs: 0 1px 3px 0 oklch(0 0 0 / 0.05);
   --shadow-xs: 0 1px 3px 0 oklch(0 0 0 / 0.05);
@@ -97,6 +102,10 @@
   --sidebar-accent-foreground: oklch(0.92 0 0);
   --sidebar-border: oklch(0.94 0 0);
   --sidebar-ring: oklch(0.77 0 0);
+  --scrollbar-track: var(--muted);
+  --scrollbar-thumb: color-mix(in oklab, var(--primary) 45%, var(--muted));
+  --scrollbar-thumb-hover:
+    color-mix(in oklab, var(--primary) 60%, var(--muted));
   --shadow-2xs: 0 1px 3px 0 oklch(0 0 0 / 0.05);
   --shadow-xs: 0 1px 3px 0 oklch(0 0 0 / 0.05);
   --shadow-sm:
@@ -164,6 +173,28 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 999px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border: 2px solid var(--scrollbar-track);
+    border-radius: 999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
   }
 
   body {
@@ -252,6 +283,15 @@
 
 .app-overlay {
   @apply fixed inset-0 z-50 bg-black/55 backdrop-blur-sm;
+}
+
+/* Sonner toast overrides: enforce brand background and larger size */
+[data-sonner-toast] {
+  background-color: color-mix(in oklab, var(--primary) 14%, var(--background)) !important;
+  border-color: color-mix(in oklab, var(--primary) 36%, var(--border)) !important;
+  width: min(94vw, 560px) !important;
+  max-width: min(94vw, 560px) !important;
+  padding: 14px 16px !important;
 }
 
 @keyframes page-turn-settle-left {

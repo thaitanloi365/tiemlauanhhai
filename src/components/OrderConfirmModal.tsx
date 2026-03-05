@@ -52,7 +52,7 @@ export function OrderConfirmModal({
       <DialogContent
         className="max-h-[92vh] max-w-3xl overflow-y-auto rounded-2xl p-4 sm:p-5"
         onInteractOutside={(event) => {
-          if (submitting) event.preventDefault();
+          event.preventDefault();
         }}
         onEscapeKeyDown={(event) => {
           if (submitting) event.preventDefault();
@@ -129,6 +129,14 @@ export function OrderConfirmModal({
                   {formatCurrency(totalAmount)}
                 </strong>
               </div>
+              <div className="mt-1 flex items-center justify-between">
+                <span className="text-muted-foreground">Phí vận chuyển</span>
+                <strong className="text-muted-foreground">Sẽ báo sau</strong>
+              </div>
+              <p className="mt-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs text-foreground">
+                Nhà hàng sẽ báo lại cho khách sau khi kiểm tra địa chỉ giao với
+                bên đơn vị vận chuyển.
+              </p>
               <div className="mt-1 flex items-center justify-between text-base">
                 <span className="font-semibold">Thanh toán</span>
                 <strong className="text-primary">{formatCurrency(payableAmount)}</strong>

@@ -19,6 +19,7 @@ import { SelectSearch } from '@/components/SelectSearch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -74,6 +75,7 @@ type Props = {
   dateOptions: { value: string; label: string }[];
   slotOptions: { value: string; label: string }[];
   disabledDateReasons?: Record<string, string>;
+  noSlotReason?: string;
   submitting?: boolean;
 };
 
@@ -85,6 +87,7 @@ export function OrderForm({
   dateOptions,
   slotOptions,
   disabledDateReasons = {},
+  noSlotReason,
   submitting = false,
 }: Props) {
   const { register, control, watch, setValue, formState } = form;
@@ -140,6 +143,13 @@ export function OrderForm({
       label: option.label,
       reason: disabledDateReasons[option.value],
     }));
+  const handleAddressModeChange = (mode: AddressMode) => {
+    setAddressMode(mode);
+    setSelectedProvinceCode(HCMC_PROVINCE_CODE);
+    setValue('province', HCMC_PROVINCE_NAME);
+    setValue('district', '');
+    setValue('ward', '');
+  };
 
   return (
     <div className="space-y-5">
@@ -185,6 +195,11 @@ export function OrderForm({
                     </li>
                   ))}
                 </ul>
+              </div>
+            ) : null}
+            {noSlotReason ? (
+              <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                <p className="font-medium">{noSlotReason}</p>
               </div>
             ) : null}
           </div>
@@ -267,34 +282,28 @@ export function OrderForm({
         <p className="text-sm font-semibold text-foreground">
           Thông tin địa chỉ
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Button
-            type="button"
-            variant={addressMode === 'old' ? 'secondary' : 'outline'}
-            onClick={() => {
-              setAddressMode('old');
-              setSelectedProvinceCode(HCMC_PROVINCE_CODE);
-              setValue('province', HCMC_PROVINCE_NAME);
-              setValue('district', '');
-              setValue('ward', '');
-            }}
+        <RadioGroup
+          value={addressMode}
+          onValueChange={(value) =>
+            handleAddressModeChange(value as AddressMode)
+          }
+          className="grid gap-2 sm:grid-cols-2"
+        >
+          <Label
+            htmlFor="address-mode-old"
+            className="flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm"
           >
+            <RadioGroupItem id="address-mode-old" value="old" />
             Địa chỉ cũ
-          </Button>
-          <Button
-            type="button"
-            variant={addressMode === 'new' ? 'secondary' : 'outline'}
-            onClick={() => {
-              setAddressMode('new');
-              setSelectedProvinceCode(HCMC_PROVINCE_CODE);
-              setValue('province', HCMC_PROVINCE_NAME);
-              setValue('district', '');
-              setValue('ward', '');
-            }}
+          </Label>
+          <Label
+            htmlFor="address-mode-new"
+            className="flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm"
           >
+            <RadioGroupItem id="address-mode-new" value="new" />
             Địa chỉ mới
-          </Button>
-        </div>
+          </Label>
+        </RadioGroup>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="text-sm">
             <Label className="mb-1 block">Thành phố/Tỉnh</Label>
@@ -355,7 +364,7 @@ export function OrderForm({
           </div>
         </div>
         {!isHcmProvince ? (
-          <div className="rounded-xl border border-border bg-muted p-3 text-sm text-foreground">
+          <div className="rounded-xl border border-amber-300/70 bg-amber-50 p-3 text-sm text-amber-900">
             Hiện tại quán chỉ hỗ trợ giao khu vực Thành phố Hồ Chí Minh.
           </div>
         ) : null}

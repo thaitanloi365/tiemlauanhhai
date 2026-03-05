@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { BottomNav } from '@/components/BottomNav';
-import { ReviewForm } from '@/components/ReviewForm';
+import { OrderFloatingActions } from '@/components/OrderFloatingActions';
 import { formatDateTimeVi } from '@/lib/date';
 import { sessionStore } from '@/lib/stores/session';
 import { formatCurrency, statusClass, statusLabel } from '@/lib/utils/format';
@@ -22,7 +22,6 @@ export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const sessionId = useMemo(() => sessionStore.getCurrent(), []);
-  const [reviewError, setReviewError] = useState('');
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['order-detail', params.id, sessionId],
@@ -39,7 +38,6 @@ export default function OrderDetailPage() {
   });
 
   const submitReview = async (rating: number, comment: string) => {
-    setReviewError('');
     const res = await fetch('/api/reviews', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -52,8 +50,7 @@ export default function OrderDetailPage() {
     });
     const json = await res.json();
     if (!res.ok) {
-      setReviewError(json?.message || 'Không thể gửi đánh giá.');
-      return;
+      throw new Error(json?.message || 'Không thể gửi đánh giá.');
     }
     await queryClient.invalidateQueries({
       queryKey: ['order-detail', params.id, sessionId],
@@ -79,8 +76,7 @@ export default function OrderDetailPage() {
           </p>
         ) : null}
         {data ? (
-          <div className="mt-5 grid gap-5 lg:grid-cols-[1.2fr,1fr]">
-            <div className="space-y-4">
+          <div className="mt-5 space-y-4">
               <section className="card-surface p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
@@ -147,27 +143,24 @@ export default function OrderDetailPage() {
                   ))}
                 </div>
               </section>
-            </div>
-            <div className="space-y-4">
               {data.review ? (
                 <div className="card-surface p-4">
                   <h3 className="text-lg font-semibold">Đánh giá của bạn</h3>
-                  <p className="mt-2 text-sm">Điểm: {data.review.rating}/5</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {data.review.comment}
+                    {data.review.comment || 'Bạn chưa để lại nhận xét.'}
                   </p>
                 </div>
-              ) : (
-                <ReviewForm
-                  onSubmit={submitReview}
-                  disabled={data.order.status !== 'delivered'}
-                />
-              )}
-              {reviewError ? (
-                <p className="text-sm text-destructive">{reviewError}</p>
               ) : null}
-            </div>
           </div>
+        ) : null}
+        {data ? (
+          <OrderFloatingActions
+            orderId={params.id}
+            sessionId={sessionId}
+            orderStatus={data.order.status}
+            review={data.review}
+            onSubmitReview={submitReview}
+          />
         ) : null}
       </main>
       <Footer />

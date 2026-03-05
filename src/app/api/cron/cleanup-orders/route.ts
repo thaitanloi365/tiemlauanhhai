@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase, hasSupabaseConfig } from '@/lib/server/supabase';
 import { ORDER_TIME } from '@/lib/constants/order';
 import { now as dayjsNow } from '@/lib/date';
+import { deleteChatStorageFiles } from '@/lib/server/chat-media';
 
 function isAuthorized(request: NextRequest, secret: string | undefined) {
   if (!secret) return false;
@@ -61,11 +62,44 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: logError.message }, { status: 500 });
   }
 
-  const { data: deletedRows, error: deleteError } = await supabase
+  const { data: candidateRows, error: candidateError } = await supabase
     .from('orders')
-    .delete()
-    .lt('expired_at', deleteCutoffIso)
-    .select('id');
+    .select('id')
+    .lt('expired_at', deleteCutoffIso);
+  if (candidateError) {
+    return NextResponse.json({ message: candidateError.message }, { status: 500 });
+  }
+
+  const candidateOrderIds = (candidateRows ?? []).map((row) => row.id as string);
+  if (candidateOrderIds.length > 0) {
+    const { data: messageRows, error: messageError } = await supabase
+      .from('order_messages')
+      .select('images')
+      .in('order_id', candidateOrderIds);
+    if (messageError) {
+      return NextResponse.json({ message: messageError.message }, { status: 500 });
+    }
+
+    const urlsToDelete = (messageRows ?? []).flatMap((row) => {
+      const images = row.images;
+      return Array.isArray(images)
+        ? images.filter((url): url is string => typeof url === 'string' && url.length > 0)
+        : [];
+    });
+    await deleteChatStorageFiles(urlsToDelete);
+  }
+
+  let deletedRows: { id: string }[] = [];
+  let deleteError: { message: string } | null = null;
+  if (candidateOrderIds.length > 0) {
+    const deleteResult = await supabase
+      .from('orders')
+      .delete()
+      .in('id', candidateOrderIds)
+      .select('id');
+    deletedRows = (deleteResult.data ?? []) as { id: string }[];
+    deleteError = deleteResult.error;
+  }
 
   if (deleteError)
     return NextResponse.json({ message: deleteError.message }, { status: 500 });

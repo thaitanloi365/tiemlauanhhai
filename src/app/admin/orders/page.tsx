@@ -290,7 +290,10 @@ function AdminOrderRowActions({ order }: { order: AdminOrder }) {
         >
           <MessageCircle />
           {order.has_unread_for_admin ? (
-            <span className="absolute right-1 top-1 size-2 rounded-full bg-destructive" />
+            <>
+              <span className="pointer-events-none absolute right-1 top-1 size-2 rounded-full bg-primary motion-safe:animate-bounce" />
+              <span className="pointer-events-none absolute right-0.5 top-0.5 size-3 rounded-full border border-primary/60 motion-safe:animate-ping" />
+            </>
           ) : null}
         </Button>
         <Button

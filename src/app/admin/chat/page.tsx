@@ -15,6 +15,14 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -73,14 +81,18 @@ export default function AdminChatPage() {
     queryKey: ['admin', 'chat', 'conversations'],
     queryFn: async () => {
       const res = await fetch('/api/admin/chat');
-      const data = (await res.json()) as AdminChatResponse & { message?: string };
+      const data = (await res.json()) as AdminChatResponse & {
+        message?: string;
+      };
       if (!res.ok) {
         throw new Error(data.message ?? 'Không tải được danh sách chat');
       }
       return data.conversations ?? [];
     },
   });
-  const availableOrderIds = (conversationsQuery.data ?? []).map((item) => item.order.id);
+  const availableOrderIds = (conversationsQuery.data ?? []).map(
+    (item) => item.order.id,
+  );
   const fallbackOrderId = conversationsQuery.data?.[0]?.order.id ?? '';
   const activeOrderId =
     f.o && availableOrderIds.includes(f.o) ? f.o : fallbackOrderId;
@@ -89,8 +101,11 @@ export default function AdminChatPage() {
     queryKey: ['admin', 'chat', 'order-detail', activeOrderId],
     queryFn: async () => {
       const res = await fetch(`/api/admin/orders/${activeOrderId}`);
-      const data = (await res.json()) as OrderDetailResponse & { message?: string };
-      if (!res.ok) throw new Error(data.message ?? 'Không tải được chi tiết đơn');
+      const data = (await res.json()) as OrderDetailResponse & {
+        message?: string;
+      };
+      if (!res.ok)
+        throw new Error(data.message ?? 'Không tải được chi tiết đơn');
       return data;
     },
     enabled: Boolean(activeOrderId),
@@ -100,10 +115,10 @@ export default function AdminChatPage() {
     if (!hasSupabaseBrowserConfig()) return;
 
     const channel = browserSupabase
-      .channel('admin-chat:conversation-list')
+      .channel('admin-chat')
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'order_messages' },
+        'broadcast',
+        { event: '*' },
         () => {
           void queryClient.invalidateQueries({
             queryKey: ['admin', 'chat', 'conversations'],
@@ -138,7 +153,8 @@ export default function AdminChatPage() {
     [conversationsQuery.data, activeOrderId],
   );
 
-  const selectedOrder = orderDetailQuery.data?.order ?? selectedConversation?.order;
+  const selectedOrder =
+    orderDetailQuery.data?.order ?? selectedConversation?.order;
 
   return (
     <div className="container-shell space-y-4">
@@ -158,7 +174,9 @@ export default function AdminChatPage() {
               {(conversationsQuery.error as Error).message}
             </p>
           ) : (conversationsQuery.data ?? []).length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">Chưa có cuộc chat nào.</p>
+            <p className="p-4 text-sm text-muted-foreground">
+              Chưa có cuộc chat nào.
+            </p>
           ) : (
             (conversationsQuery.data ?? []).map((conversation) => {
               const active = activeOrderId === conversation.order.id;
@@ -189,15 +207,20 @@ export default function AdminChatPage() {
                       {statusLabel(conversation.order.status)}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{conversation.order.phone}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {conversation.order.phone}
+                  </p>
                   <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
                     {latestMessageText}
                   </p>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     {conversation.has_unread_for_admin ? (
-                      <p className="text-xs font-semibold text-destructive">
-                        Có tin nhắn chưa đọc
-                      </p>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                        <span className="size-1.5 rounded-full bg-primary motion-safe:animate-ping" />
+                        <span className="motion-safe:animate-pulse">
+                          Có tin nhắn chưa đọc
+                        </span>
+                      </span>
                     ) : (
                       <span />
                     )}
@@ -216,7 +239,7 @@ export default function AdminChatPage() {
         <Sheet open={chatDrawerOpen} onOpenChange={setChatDrawerOpen}>
           <SheetContent
             side="right"
-            className="my-3 mr-3 flex h-[calc(100dvh-1.5rem)] w-[min(920px,calc(100vw-1.5rem))] max-w-none flex-col overflow-hidden rounded-2xl border p-4 sm:max-w-none"
+            className="my-3 mr-3 flex h-[calc(100dvh-1.5rem)] w-[min(760px,calc(100vw-1.5rem))] max-w-none flex-col overflow-hidden rounded-2xl border p-4 sm:max-w-none"
           >
             <SheetHeader>
               <div className="flex items-center justify-between gap-2">
@@ -319,24 +342,32 @@ export default function AdminChatPage() {
         </Drawer>
       )}
 
-      <Drawer open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DrawerContent className="max-h-[82vh]">
-          <DrawerHeader>
-            <DrawerTitle>Đánh giá đơn hàng</DrawerTitle>
-            <DrawerDescription>
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="flex max-h-[82vh] w-[min(560px,calc(100vw-2rem))] flex-col overflow-hidden p-0 sm:max-w-none">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>Đánh giá đơn hàng</DialogTitle>
+            <DialogDescription>
               {selectedOrder
                 ? `Mã đơn ${selectedOrder.id.slice(0, 8).toUpperCase()}`
                 : 'Đơn hàng'}
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="px-1 pb-2">
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-2">
             {orderDetailQuery.data?.review ? (
               <div className="rounded-md border border-border bg-muted/40 p-4">
                 <p className="text-2xl">
-                  {getReviewEmotionByRating(orderDetailQuery.data.review.rating).emoji}
+                  {
+                    getReviewEmotionByRating(
+                      orderDetailQuery.data.review.rating,
+                    ).emoji
+                  }
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {getReviewEmotionByRating(orderDetailQuery.data.review.rating).label}
+                  {
+                    getReviewEmotionByRating(
+                      orderDetailQuery.data.review.rating,
+                    ).label
+                  }
                 </p>
                 <p className="mt-2 text-sm">
                   {orderDetailQuery.data.review.comment ||
@@ -349,7 +380,7 @@ export default function AdminChatPage() {
               </div>
             )}
           </div>
-          <DrawerFooter>
+          <DialogFooter className="px-6 pb-6">
             <Button
               type="button"
               variant="outline"
@@ -357,9 +388,9 @@ export default function AdminChatPage() {
             >
               Đóng
             </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

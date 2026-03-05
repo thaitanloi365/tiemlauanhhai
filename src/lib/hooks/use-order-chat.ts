@@ -150,6 +150,23 @@ export function useOrderChat(options: UseOrderChatOptions) {
       if (!res.ok) throw new Error(data.message ?? 'Không thể cập nhật trạng thái đã đọc');
       return true;
     },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<MessagesResponse>(queryKey);
+      queryClient.setQueryData<MessagesResponse | undefined>(queryKey, (current) => {
+        if (!current) return current;
+        if (actor.role === 'customer') {
+          return { ...current, has_unread_for_customer: false };
+        }
+        return { ...current, has_unread_for_admin: false };
+      });
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
     },
@@ -159,26 +176,11 @@ export function useOrderChat(options: UseOrderChatOptions) {
     if (!hasSupabaseBrowserConfig() || !orderId) return;
 
     const channel = browserSupabase
-      .channel(`order-chat:${orderId}:${actor.role}:${actorSessionId || 'admin'}`)
+      .channel(`order:${orderId}`)
       .on(
-        'postgres_changes',
+        'broadcast',
         {
           event: '*',
-          schema: 'public',
-          table: 'order_messages',
-          filter: `order_id=eq.${orderId}`,
-        },
-        () => {
-          void queryClient.invalidateQueries({ queryKey });
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${orderId}`,
         },
         () => {
           void queryClient.invalidateQueries({ queryKey });

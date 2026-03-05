@@ -24,6 +24,14 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -193,7 +201,10 @@ function AdminDashboardOrderCard({
     <>
       <div className="rounded-xl border border-border bg-muted/40 p-3 text-sm transition hover:bg-muted">
         <div className="flex items-start justify-between gap-2">
-          <Link href={`/admin/orders/${order.id}`} className="font-semibold text-foreground underline">
+          <Link
+            href={`/admin/orders/${order.id}`}
+            className="font-semibold text-foreground underline"
+          >
             #{order.id.slice(0, 8).toUpperCase()}
           </Link>
           <div className="flex items-center gap-2">
@@ -208,7 +219,10 @@ function AdminDashboardOrderCard({
             >
               <MessageCircle />
               {order.has_unread_for_admin ? (
-                <span className="absolute right-1 top-1 size-2 rounded-full bg-destructive" />
+                <>
+                  <span className="pointer-events-none absolute right-1 top-1 size-2 rounded-full bg-primary motion-safe:animate-bounce" />
+                  <span className="pointer-events-none absolute right-0.5 top-0.5 size-3 rounded-full border border-primary/60 motion-safe:animate-ping" />
+                </>
               ) : null}
             </Button>
             <Button
@@ -226,11 +240,17 @@ function AdminDashboardOrderCard({
             </Badge>
           </div>
         </div>
-        <p className="mt-2 font-medium text-foreground">{order.customer_name}</p>
+        <p className="mt-2 font-medium text-foreground">
+          {order.customer_name}
+        </p>
         <p className="text-muted-foreground">{order.phone}</p>
         <div className="mt-2 flex items-center justify-between text-muted-foreground">
-          <p className="font-medium">{formatCurrency(order.total_amount ?? 0)}</p>
-          <p className="text-xs text-muted-foreground">{formatDateTimeVi(order.created_at)}</p>
+          <p className="font-medium">
+            {formatCurrency(order.total_amount ?? 0)}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {formatDateTimeVi(order.created_at)}
+          </p>
         </div>
       </div>
 
@@ -238,19 +258,22 @@ function AdminDashboardOrderCard({
         <Sheet open={chatOpen} onOpenChange={setChatOpen}>
           <SheetContent
             side="right"
-            className="my-3 mr-3 flex h-[calc(100dvh-1.5rem)] w-[min(920px,calc(100vw-1.5rem))] max-w-none flex-col overflow-hidden rounded-2xl border p-4 sm:max-w-none"
+            className="my-3 mr-3 flex h-[calc(100dvh-1.5rem)] w-[min(760px,calc(100vw-1.5rem))] max-w-none flex-col overflow-hidden rounded-2xl border p-4 sm:max-w-none"
           >
             <SheetHeader>
               <SheetTitle>Chat với khách hàng</SheetTitle>
               <SheetDescription>
-                Mã đơn {order.id.slice(0, 8).toUpperCase()} - {order.customer_name}
+                Mã đơn {order.id.slice(0, 8).toUpperCase()} -{' '}
+                {order.customer_name}
               </SheetDescription>
             </SheetHeader>
             <div className="mt-3 min-h-0 flex-1 overflow-hidden px-1 pb-1">
               <ChatBox
                 orderId={order.id}
                 senderType="admin"
-                readonly={isChatReadonlyByOrderStatus(detailOrder?.status ?? order.status)}
+                readonly={isChatReadonlyByOrderStatus(
+                  detailOrder?.status ?? order.status,
+                )}
                 title="Chat với khách hàng"
               />
             </div>
@@ -262,14 +285,17 @@ function AdminDashboardOrderCard({
             <DrawerHeader>
               <DrawerTitle>Chat với khách hàng</DrawerTitle>
               <DrawerDescription>
-                Mã đơn {order.id.slice(0, 8).toUpperCase()} - {order.customer_name}
+                Mã đơn {order.id.slice(0, 8).toUpperCase()} -{' '}
+                {order.customer_name}
               </DrawerDescription>
             </DrawerHeader>
             <div className="min-h-0 flex-1 overflow-hidden px-1 pb-1">
               <ChatBox
                 orderId={order.id}
                 senderType="admin"
-                readonly={isChatReadonlyByOrderStatus(detailOrder?.status ?? order.status)}
+                readonly={isChatReadonlyByOrderStatus(
+                  detailOrder?.status ?? order.status,
+                )}
                 title="Chat với khách hàng"
               />
             </div>
@@ -277,29 +303,40 @@ function AdminDashboardOrderCard({
         </Drawer>
       )}
 
-      <Drawer open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DrawerContent className="max-h-[82vh]">
-          <DrawerHeader>
-            <DrawerTitle>Đánh giá đơn hàng</DrawerTitle>
-            <DrawerDescription>
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="flex max-h-[82vh] w-[min(560px,calc(100vw-2rem))] flex-col overflow-hidden p-0 sm:max-w-none">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>Đánh giá đơn hàng</DialogTitle>
+            <DialogDescription>
               Mã đơn {order.id.slice(0, 8).toUpperCase()}
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="px-1 pb-2">
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-2">
             {reviewQuery.isLoading ? (
-              <p className="text-sm text-muted-foreground">Đang tải đánh giá...</p>
+              <p className="text-sm text-muted-foreground">
+                Đang tải đánh giá...
+              </p>
             ) : reviewQuery.isError ? (
-              <p className="text-sm text-destructive">{reviewQuery.error.message}</p>
+              <p className="text-sm text-destructive">
+                {reviewQuery.error.message}
+              </p>
             ) : reviewQuery.data?.review ? (
               <div className="rounded-md border border-border bg-muted/40 p-4">
                 <p className="text-2xl">
-                  {getReviewEmotionByRating(reviewQuery.data.review.rating).emoji}
+                  {
+                    getReviewEmotionByRating(reviewQuery.data.review.rating)
+                      .emoji
+                  }
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {getReviewEmotionByRating(reviewQuery.data.review.rating).label}
+                  {
+                    getReviewEmotionByRating(reviewQuery.data.review.rating)
+                      .label
+                  }
                 </p>
                 <p className="mt-2 text-sm">
-                  {reviewQuery.data.review.comment || 'Khách chưa để lại nhận xét.'}
+                  {reviewQuery.data.review.comment ||
+                    'Khách chưa để lại nhận xét.'}
                 </p>
               </div>
             ) : (
@@ -308,13 +345,17 @@ function AdminDashboardOrderCard({
               </div>
             )}
           </div>
-          <DrawerFooter>
-            <Button type="button" variant="outline" onClick={() => setReviewOpen(false)}>
+          <DialogFooter className="px-6 pb-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReviewOpen(false)}
+            >
               Đóng
             </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

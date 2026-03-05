@@ -42,6 +42,7 @@ export function OrderFloatingActions({
     actor: { role: 'customer', sessionId },
   });
   const { hasUnread, markAsRead } = customerChat;
+  const showUnreadHint = hasUnread && !chatOpen;
 
   useEffect(() => {
     if (!chatOpen) return;
@@ -88,16 +89,24 @@ export function OrderFloatingActions({
           aria-label="Mở chat đơn hàng"
         >
           <MessageCircle className="size-6" />
-          {hasUnread ? (
-            <span className="absolute right-1 top-1 inline-flex size-3 items-center justify-center rounded-full bg-amber-300 ring-2 ring-background">
-              <span className="size-1.5 rounded-full bg-amber-700" />
-            </span>
+          {showUnreadHint ? (
+            <>
+              <span
+                className="pointer-events-none absolute -top-11 right-0 inline-flex max-w-[160px] items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-lg motion-safe:animate-bounce"
+                role="status"
+                aria-live="polite"
+              >
+                Có tin nhắn mới
+              </span>
+              <span className="pointer-events-none absolute -top-2.5 right-4 size-3 rotate-45 bg-primary shadow-sm motion-safe:animate-bounce" />
+              <span className="pointer-events-none absolute -inset-1 rounded-full border-2 border-primary/60 motion-safe:animate-ping" />
+            </>
           ) : null}
         </Button>
       </div>
 
       <Dialog open={chatOpen} onOpenChange={setChatOpen}>
-        <DialogContent className="top-auto! left-auto! right-4! bottom-20! h-[80vh]! w-[calc(100vw-2rem)]! max-w-[460px]! translate-x-0! translate-y-0! grid-rows-[auto,1fr]! p-3 sm:bottom-6! sm:right-6!">
+        <DialogContent className="top-auto! left-auto! right-4! bottom-20! h-[80vh]! w-[calc(100vw-2rem)]! max-w-[480px]! translate-x-0! translate-y-0! grid-rows-[auto,1fr]! p-3 sm:bottom-6! sm:right-6!">
           <div className="min-h-0 overflow-hidden">
             <ChatBox
               key={orderId}

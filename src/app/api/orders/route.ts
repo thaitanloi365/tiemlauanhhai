@@ -38,6 +38,8 @@ type MenuRuleItem = {
   name: string;
   block_today: boolean;
   block_today_reason?: string | null;
+  block_tomorrow?: boolean;
+  block_tomorrow_reason?: string | null;
   blocked_delivery_dates: string[];
   blocked_delivery_date_reasons?: Record<string, string> | null;
   is_main_dish?: boolean;
@@ -130,12 +132,19 @@ function getVietnamDateValue(now: DateInput) {
   return formatDateOnlyInTz(now, APP_TIMEZONE);
 }
 
+function getVietnamTomorrowDateValue(now: DateInput) {
+  return parseDateOnlyInTz(getVietnamDateValue(now)).add(1, 'day').format(
+    DATE_ONLY_FORMAT,
+  );
+}
+
 function getDateBlockedMenuItems(
   scheduledDate: string,
   menuItems: MenuRuleItem[],
   now: DateInput = dayjsNow().valueOf(),
 ) {
   const todayDateValue = getVietnamDateValue(now);
+  const tomorrowDateValue = getVietnamTomorrowDateValue(now);
   return menuItems
     .map((menuItem) => {
       if (menuItem.block_today && scheduledDate === todayDateValue) {
@@ -144,6 +153,14 @@ function getDateBlockedMenuItems(
           active_reason:
             menuItem.block_today_reason?.trim() ||
             `Món "${menuItem.name}" đang tạm ngưng giao hôm nay.`,
+        };
+      }
+      if (menuItem.block_tomorrow && scheduledDate === tomorrowDateValue) {
+        return {
+          ...menuItem,
+          active_reason:
+            menuItem.block_tomorrow_reason?.trim() ||
+            `Món "${menuItem.name}" đang tạm ngưng giao trong ngày mai.`,
         };
       }
       if (menuItem.blocked_delivery_dates.includes(scheduledDate)) {
@@ -394,7 +411,7 @@ export async function POST(request: NextRequest) {
   const { data: menuItems, error: menuItemsError } = await supabase
     .from('menu_items')
     .select(
-      'id,name,category_id,is_main_dish,block_today,block_today_reason,blocked_delivery_dates,blocked_delivery_date_reasons',
+      'id,name,category_id,is_main_dish,block_today,block_today_reason,block_tomorrow,block_tomorrow_reason,blocked_delivery_dates,blocked_delivery_date_reasons',
     )
     .in('id', menuItemIds);
   if (menuItemsError)
@@ -414,6 +431,11 @@ export async function POST(request: NextRequest) {
         blockTodayReason:
           typeof item.block_today_reason === 'string'
             ? item.block_today_reason
+            : null,
+        blockTomorrow: Boolean(item.block_tomorrow),
+        blockTomorrowReason:
+          typeof item.block_tomorrow_reason === 'string'
+            ? item.block_tomorrow_reason
             : null,
         blockedDeliveryDates: (
           (item.blocked_delivery_dates ?? []) as string[]
@@ -445,6 +467,8 @@ export async function POST(request: NextRequest) {
       name: item.name,
       block_today: item.blockToday,
       block_today_reason: item.blockTodayReason,
+      block_tomorrow: item.blockTomorrow,
+      block_tomorrow_reason: item.blockTomorrowReason,
       blocked_delivery_dates: item.blockedDeliveryDates,
       blocked_delivery_date_reasons: item.blockedDeliveryDateReasons,
       is_main_dish: item.isMainDish,

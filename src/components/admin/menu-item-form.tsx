@@ -66,6 +66,8 @@ type MenuItemInput = {
   is_main_dish?: boolean;
   block_today?: boolean;
   block_today_reason?: string | null;
+  block_tomorrow?: boolean;
+  block_tomorrow_reason?: string | null;
   blocked_delivery_dates?: string[] | null;
   blocked_delivery_date_reasons?: Record<string, string> | null;
   sort_order?: number;
@@ -148,6 +150,8 @@ const menuItemFormSchema = z.object({
   isMainDish: z.boolean(),
   blockToday: z.boolean(),
   blockTodayReason: z.string(),
+  blockTomorrow: z.boolean(),
+  blockTomorrowReason: z.string(),
   blockedDateRules: z.array(blockedDateRuleSchema),
   sortOrder: z
     .string()
@@ -191,6 +195,8 @@ export function MenuItemForm({
       isMainDish: false,
       blockToday: false,
       blockTodayReason: '',
+      blockTomorrow: false,
+      blockTomorrowReason: '',
       blockedDateRules: [],
       sortOrder: '99',
       variants: [{ ...EMPTY_VARIANT }],
@@ -244,6 +250,8 @@ export function MenuItemForm({
       isMainDish: Boolean(item?.is_main_dish),
       blockToday: Boolean(item?.block_today),
       blockTodayReason: item?.block_today_reason ?? '',
+      blockTomorrow: Boolean(item?.block_tomorrow),
+      blockTomorrowReason: item?.block_tomorrow_reason ?? '',
       blockedDateRules: toBlockedDateRules(
         item?.blocked_delivery_dates,
         item?.blocked_delivery_date_reasons,
@@ -348,6 +356,8 @@ export function MenuItemForm({
       isMainDish: values.isMainDish,
       blockToday: values.blockToday,
       blockTodayReason: values.blockTodayReason.trim() || null,
+      blockTomorrow: values.blockTomorrow,
+      blockTomorrowReason: values.blockTomorrowReason.trim() || null,
       blockedDeliveryDates,
       blockedDeliveryDateReasons,
       sortOrder: Number(values.sortOrder || 0),
@@ -404,6 +414,8 @@ export function MenuItemForm({
     if (isMainDish) return;
     setValue('blockToday', false, { shouldDirty: true });
     setValue('blockTodayReason', '', { shouldDirty: true });
+    setValue('blockTomorrow', false, { shouldDirty: true });
+    setValue('blockTomorrowReason', '', { shouldDirty: true });
     setValue('blockedDateRules', [], { shouldDirty: true });
   }, [isMainDish, setValue]);
 
@@ -570,6 +582,31 @@ export function MenuItemForm({
               placeholder="Ví dụ: Món này chỉ bán ngày mai do hết nguyên liệu"
               disabled={!isMainDish}
               {...register('blockTodayReason')}
+            />
+          </div>
+          <div className="flex items-center gap-2 sm:col-span-2">
+            <Controller
+              control={control}
+              name="blockTomorrow"
+              render={({ field }) => (
+                <Checkbox
+                  id="menu-item-block-tomorrow"
+                  checked={field.value}
+                  disabled={!isMainDish}
+                  onCheckedChange={(value) => field.onChange(value === true)}
+                />
+              )}
+            />
+            <Label htmlFor="menu-item-block-tomorrow">
+              Không giao trong ngày mai
+            </Label>
+          </div>
+          <div className="grid gap-1 sm:col-span-2">
+            <Label>Lý do chặn ngày mai</Label>
+            <Input
+              placeholder="Ví dụ: Món này chỉ mở bán lại sau ngày mai"
+              disabled={!isMainDish}
+              {...register('blockTomorrowReason')}
             />
           </div>
           <div className="grid gap-2 sm:col-span-2">

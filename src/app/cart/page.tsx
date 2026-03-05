@@ -45,6 +45,8 @@ type MenuRuleItem = {
   is_main_dish?: boolean;
   block_today?: boolean;
   block_today_reason?: string | null;
+  block_tomorrow?: boolean;
+  block_tomorrow_reason?: string | null;
   blocked_delivery_dates?: string[] | null;
   blocked_delivery_date_reasons?: Record<string, string> | null;
 };
@@ -70,6 +72,7 @@ export default function CartPage() {
     useState<PromotionMessageTone>('neutral');
   const dateOptions = useMemo(() => nextSevenDays(), []);
   const todayDateValue = dateOptions[0]?.value ?? '';
+  const tomorrowDateValue = dateOptions[1]?.value ?? '';
   const scheduledDate = form.watch('scheduled_date');
 
   const menuRulesQuery = useQuery({
@@ -117,6 +120,14 @@ export default function CartPage() {
         reasons.add(todayReason);
         reasonsByDate.set(todayDateValue, reasons);
       }
+      const tomorrowReason =
+        menuItem.block_tomorrow_reason?.trim() ||
+        `Món "${itemLabel}" đang tạm ngưng giao trong ngày mai.`;
+      if (menuItem.block_tomorrow && tomorrowDateValue) {
+        const reasons = reasonsByDate.get(tomorrowDateValue) ?? new Set<string>();
+        reasons.add(tomorrowReason);
+        reasonsByDate.set(tomorrowDateValue, reasons);
+      }
       for (const blockedDate of menuItem.blocked_delivery_dates ?? []) {
         if (!selectedDates.has(blockedDate)) continue;
         const reasonForDate = menuItem.blocked_delivery_date_reasons?.[
@@ -133,7 +144,7 @@ export default function CartPage() {
       nextReasons[dateValue] = Array.from(reasons).join(' ');
     }
     return nextReasons;
-  }, [dateOptions, lines, menuItemById, todayDateValue]);
+  }, [dateOptions, lines, menuItemById, todayDateValue, tomorrowDateValue]);
 
   const createOrderMutation = useMutation({
     mutationFn: async (values: OrderFormValues) => {

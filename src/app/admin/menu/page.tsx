@@ -27,6 +27,8 @@ type MenuItem = {
   is_main_dish: boolean;
   block_today: boolean;
   block_today_reason: string | null;
+  block_tomorrow: boolean;
+  block_tomorrow_reason: string | null;
   blocked_delivery_dates: string[];
   blocked_delivery_date_reasons: Record<string, string> | null;
   description?: string | null;
@@ -118,6 +120,8 @@ export default function AdminMenuPage() {
           isMainDish: item.is_main_dish,
           blockToday: item.block_today,
           blockTodayReason: item.block_today_reason,
+          blockTomorrow: item.block_tomorrow,
+          blockTomorrowReason: item.block_tomorrow_reason,
           blockedDeliveryDates: item.blocked_delivery_dates ?? [],
           blockedDeliveryDateReasons: item.blocked_delivery_date_reasons ?? {},
           sortOrder: item.sort_order ?? 0,
@@ -270,6 +274,11 @@ export default function AdminMenuPage() {
                       {item.block_today ? (
                         <span className="rounded-full bg-amber-100 px-2 py-1 text-amber-700">
                           Chặn hôm nay
+                        </span>
+                      ) : null}
+                      {item.block_tomorrow ? (
+                        <span className="rounded-full bg-orange-100 px-2 py-1 text-orange-700">
+                          Chặn ngày mai
                         </span>
                       ) : null}
                     </div>

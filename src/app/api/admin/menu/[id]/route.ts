@@ -156,6 +156,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       is_main_dish: Boolean(body.isMainDish),
       block_today: Boolean(body.blockToday),
       block_today_reason: normalizeOptionalText(body.blockTodayReason),
+      block_tomorrow: Boolean(body.blockTomorrow),
+      block_tomorrow_reason: normalizeOptionalText(body.blockTomorrowReason),
       blocked_delivery_dates: normalizeBlockedDeliveryDates(
         body.blockedDeliveryDates,
       ),

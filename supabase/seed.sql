@@ -306,6 +306,8 @@ set
 	is_main_dish = excluded.is_main_dish,
 	block_today = excluded.block_today,
 	block_today_reason = excluded.block_today_reason,
+	block_tomorrow = false,
+	block_tomorrow_reason = null,
 	blocked_delivery_dates = excluded.blocked_delivery_dates,
 	blocked_delivery_date_reasons = excluded.blocked_delivery_date_reasons,
 	sort_order = excluded.sort_order;

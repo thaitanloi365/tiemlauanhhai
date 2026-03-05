@@ -45,6 +45,8 @@ declare global {
       is_main_dish: boolean;
       block_today: boolean;
       block_today_reason: string | null;
+      block_tomorrow: boolean;
+      block_tomorrow_reason: string | null;
       blocked_delivery_dates: string[];
       blocked_delivery_date_reasons: Record<string, string>;
       sort_order: number;
